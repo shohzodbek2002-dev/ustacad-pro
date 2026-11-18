@@ -3233,12 +3233,13 @@ var _dl=dl;dl=function(name,data,mime,noTg){var a=arguments,self=this;if(!noTg&&
   var ac=new AbortController(),tm=setTimeout(function(){ac.abort()},60000);
   pend=fetch(purl(),{method:'POST',body:fd,signal:ac.signal,cache:'no-store'}).then(function(r){return r.json()}).then(function(j){
    clearTimeout(tm);pend=null;if(!j||j.ok!==true)throw new Error('bad');
-   var s={pro:!!j.pro,until:j.until||null,expired:j.expired||null,id:j.id||null,all:!!j.all};st={t:Date.now(),s:s};try{localStorage.setItem(PK,JSON.stringify(st))}catch(e){}return s
+   var s={pro:!!j.pro,until:j.until||null,expired:j.expired||null,id:j.id||null,all:!!j.all,trial:!!j.trial,trialUntil:Number(j.trialUntil)||0};st={t:Date.now(),s:s};try{localStorage.setItem(PK,JSON.stringify(st))}catch(e){}return s
   }).catch(function(){clearTimeout(tm);pend=null;return{pro:false,err:true}});
   return pend}
  function link(){var k=C().contact;if(/^@\w+$/.test(k))return 'https://t.me/'+k.slice(1);if(/^https:\/\//.test(k))return k;return ''}
  function openLink(u){try{var W=window.Telegram&&Telegram.WebApp;if(W&&W.openTelegramLink&&/^https:\/\/t\.me\//.test(u)){W.openTelegramLink(u);return}}catch(e){}window.open(u,'_blank')}
- function paywall(name,s,a,self){
+ function drawOK(s){return !!(s&&(s.pro||(s.trial&&s.trialUntil&&Date.now()<s.trialUntil)))}
+ function paywall(name,s,a,self,draw){
   var old=document.getElementById('pro_wall');if(old)old.remove();
   var p=C(),id=me(),ov=document.createElement('div');ov.id='pro_wall';
   ov.style.cssText='position:fixed;left:0;top:0;right:0;bottom:0;z-index:100010;background:rgba(0,0,0,.7);display:flex;align-items:flex-end;justify-content:center';
@@ -3248,11 +3249,12 @@ var _dl=dl;dl=function(name,data,mime,noTg){var a=arguments,self=this;if(!noTg&&
   function msg(){
    if(s.err)return 'Server bilan aloqa yo‘q. Biroz kutib, “Qayta tekshirish” ni bosing.';
    if(!id)return 'Pro holatini aniqlash uchun ilovani Telegram bot orqali oching.';
-   var t='Bu Pro tarif funksiyasi.';
+   var t=draw?'3D chizish (modul qo‘shish) Pro tarif funksiyasi.':'Bu Pro tarif funksiyasi.';
+   if(draw&&s.trialUntil)t+=' Bepul sinov muddati tugagan.';
    if(s.expired)t+=' Pro muddati '+s.expired+' kuni tugagan.';
    if(p.price)t+=' Narxi: '+p.price+'.';
    t+=' Pro olish uchun to‘lov qilib, shu ID ni yuboring.';return t}
-  function draw(){
+  function paint(){
    bx.innerHTML='';
    var h=document.createElement('div');h.style.cssText='font-size:17px;font-weight:700;margin-bottom:6px';h.textContent='⭐ Pro tarif kerak';bx.appendChild(h);
    var f=document.createElement('div');f.style.cssText='font-size:13px;color:#9a9285;margin-bottom:6px;word-break:break-all';f.textContent=String(name);bx.appendChild(f);
@@ -3262,9 +3264,9 @@ var _dl=dl;dl=function(name,data,mime,noTg){var a=arguments,self=this;if(!noTg&&
    function btn(t,pri,fn){var b=document.createElement('button');b.textContent=t;b.style.cssText=pri?bp:bs;b.onclick=fn;r.appendChild(b);return b}
    var lk=link();if(lk&&id)btn('✉️ '+(/^@/.test(p.contact)?p.contact+' ga yozish':'Yozish'),1,function(){openLink(lk)});
    if(id)btn('📋 ID nusxalash',0,function(){try{navigator.clipboard.writeText(id).then(function(){toast('ID nusxalandi')},function(){toast('ID: '+id)})}catch(e){toast('ID: '+id)}});
-   btn('🔄 Qayta tekshirish',0,function(){toast('Tekshirilmoqda…');check(true).then(function(n){s=n;if(n.pro){ov.remove();toast('Pro faol ✅');if(a)_g.apply(self,a)}else draw()})});
+   btn('🔄 Qayta tekshirish',0,function(){toast('Tekshirilmoqda…');check(true).then(function(n){s=n;if(draw?drawOK(n):n.pro){ov.remove();toast('Pro faol ✅');if(typeof a==='function')a();else if(a)_g.apply(self,a)}else paint()})});
    btn('Yopish',0,function(){ov.remove()})}
-  draw();ov.addEventListener('click',function(e){if(e.target===ov)ov.remove()})}
+  paint();ov.addEventListener('click',function(e){if(e.target===ov)ov.remove()})}
  var _g=dl;
  dl=function(name,data,mime,noTg){
   var a=arguments,self=this;
@@ -3274,6 +3276,27 @@ var _dl=dl;dl=function(name,data,mime,noTg){var a=arguments,self=this;if(!noTg&&
   if(c){paywall(name,c,a,self);return}
   toast('Pro holati tekshirilmoqda…');
   check().then(function(s){if(s.pro)_g.apply(self,a);else paywall(name,s,a,self)})};
+ /* ---- 3D chizish (modul qo‘shish): Pro yoki 3 kunlik bepul sinov ---- */
+ var noted=false,BYP=false,DSEL='#presets button,#cat .cd,#tpl button,#utpl .row button:not([title]),#pj_l .row button:not([title]),#kg_go,#ovc_go,#ai_a,#kp_a,#bc,#bm,[data-ta]';
+ function note(s){if(noted||!s||s.pro||!s.trial)return;noted=true;var d=Math.max(1,Math.ceil((s.trialUntil-Date.now())/864e5));toast('🎁 Bepul sinov: '+d+' kun qoldi')}
+ function guard(run){
+  if(C().off){run();return}
+  var c=cur();
+  if(c){if(drawOK(c)){note(c);run()}else paywall('3D chizish — modul qo‘shish',c,run,null,true);return}
+  toast('Pro holati tekshirilmoqda…');
+  check().then(function(s){if(drawOK(s)){note(s);run()}else paywall('3D chizish — modul qo‘shish',s,run,null,true)})}
+ document.addEventListener('click',function(e){
+  if(BYP||C().off)return;
+  var t=e.target&&e.target.closest?e.target.closest(DSEL):null;if(!t)return;
+  var c=cur();if(c&&drawOK(c)){note(c);return}
+  e.stopImmediatePropagation();e.preventDefault();
+  guard(function(){BYP=true;try{t.click()}finally{BYP=false}})},true);
+ document.addEventListener('keydown',function(e){
+  if(C().off||!(e.key==='d'||e.key==='D')||!(e.ctrlKey||e.metaKey))return;
+  var c=cur();if(c&&drawOK(c))return;
+  e.stopImmediatePropagation();e.preventDefault();
+  guard(function(){toast('Tekshirildi — Ctrl+D ni qayta bosing')})},true);
+ try{var _dm=dupMod;dupMod=function(){var a=arguments,self=this;guard(function(){_dm.apply(self,a)})}}catch(e){}
  window.ustacadPro={check:check,status:cur};
  if(!C().off)setTimeout(function(){check()},1500);
 })();
