@@ -3233,13 +3233,12 @@ var _dl=dl;dl=function(name,data,mime,noTg){var a=arguments,self=this;if(!noTg&&
   var ac=new AbortController(),tm=setTimeout(function(){ac.abort()},60000);
   pend=fetch(purl(),{method:'POST',body:fd,signal:ac.signal,cache:'no-store'}).then(function(r){return r.json()}).then(function(j){
    clearTimeout(tm);pend=null;if(!j||j.ok!==true)throw new Error('bad');
-   var s={pro:!!j.pro,until:j.until||null,expired:j.expired||null,id:j.id||null,all:!!j.all,trial:!!j.trial,trialUntil:Number(j.trialUntil)||0};st={t:Date.now(),s:s};try{localStorage.setItem(PK,JSON.stringify(st))}catch(e){}return s
+   var s={pro:!!j.pro,until:j.until||null,expired:j.expired||null,id:j.id||null,all:!!j.all};st={t:Date.now(),s:s};try{localStorage.setItem(PK,JSON.stringify(st))}catch(e){}return s
   }).catch(function(){clearTimeout(tm);pend=null;return{pro:false,err:true}});
   return pend}
  function link(){var k=C().contact;if(/^@\w+$/.test(k))return 'https://t.me/'+k.slice(1);if(/^https:\/\//.test(k))return k;return ''}
  function openLink(u){try{var W=window.Telegram&&Telegram.WebApp;if(W&&W.openTelegramLink&&/^https:\/\/t\.me\//.test(u)){W.openTelegramLink(u);return}}catch(e){}window.open(u,'_blank')}
- function drawOK(s){return !!(s&&(s.pro||(s.trial&&s.trialUntil&&Date.now()<s.trialUntil)))}
- function paywall(name,s,a,self,draw){
+ function paywall(name,s,a,self){
   var old=document.getElementById('pro_wall');if(old)old.remove();
   var p=C(),id=me(),ov=document.createElement('div');ov.id='pro_wall';
   ov.style.cssText='position:fixed;left:0;top:0;right:0;bottom:0;z-index:100010;background:rgba(0,0,0,.7);display:flex;align-items:flex-end;justify-content:center';
@@ -3249,12 +3248,11 @@ var _dl=dl;dl=function(name,data,mime,noTg){var a=arguments,self=this;if(!noTg&&
   function msg(){
    if(s.err)return 'Server bilan aloqa yo‘q. Biroz kutib, “Qayta tekshirish” ni bosing.';
    if(!id)return 'Pro holatini aniqlash uchun ilovani Telegram bot orqali oching.';
-   var t=draw?'3D chizish (modul qo‘shish) Pro tarif funksiyasi.':'Bu Pro tarif funksiyasi.';
-   if(draw&&s.trialUntil)t+=' Bepul sinov muddati tugagan.';
+   var t='Bu Pro tarif funksiyasi.';
    if(s.expired)t+=' Pro muddati '+s.expired+' kuni tugagan.';
    if(p.price)t+=' Narxi: '+p.price+'.';
    t+=' Pro olish uchun to‘lov qilib, shu ID ni yuboring.';return t}
-  function paint(){
+  function draw(){
    bx.innerHTML='';
    var h=document.createElement('div');h.style.cssText='font-size:17px;font-weight:700;margin-bottom:6px';h.textContent='⭐ Pro tarif kerak';bx.appendChild(h);
    var f=document.createElement('div');f.style.cssText='font-size:13px;color:#9a9285;margin-bottom:6px;word-break:break-all';f.textContent=String(name);bx.appendChild(f);
@@ -3264,9 +3262,9 @@ var _dl=dl;dl=function(name,data,mime,noTg){var a=arguments,self=this;if(!noTg&&
    function btn(t,pri,fn){var b=document.createElement('button');b.textContent=t;b.style.cssText=pri?bp:bs;b.onclick=fn;r.appendChild(b);return b}
    var lk=link();if(lk&&id)btn('✉️ '+(/^@/.test(p.contact)?p.contact+' ga yozish':'Yozish'),1,function(){openLink(lk)});
    if(id)btn('📋 ID nusxalash',0,function(){try{navigator.clipboard.writeText(id).then(function(){toast('ID nusxalandi')},function(){toast('ID: '+id)})}catch(e){toast('ID: '+id)}});
-   btn('🔄 Qayta tekshirish',0,function(){toast('Tekshirilmoqda…');check(true).then(function(n){s=n;if(draw?drawOK(n):n.pro){ov.remove();toast('Pro faol ✅');if(typeof a==='function')a();else if(a)_g.apply(self,a)}else paint()})});
+   btn('🔄 Qayta tekshirish',0,function(){toast('Tekshirilmoqda…');check(true).then(function(n){s=n;if(n.pro){ov.remove();toast('Pro faol ✅');if(a)_g.apply(self,a)}else draw()})});
    btn('Yopish',0,function(){ov.remove()})}
-  paint();ov.addEventListener('click',function(e){if(e.target===ov)ov.remove()})}
+  draw();ov.addEventListener('click',function(e){if(e.target===ov)ov.remove()})}
  var _g=dl;
  dl=function(name,data,mime,noTg){
   var a=arguments,self=this;
@@ -3276,27 +3274,6 @@ var _dl=dl;dl=function(name,data,mime,noTg){var a=arguments,self=this;if(!noTg&&
   if(c){paywall(name,c,a,self);return}
   toast('Pro holati tekshirilmoqda…');
   check().then(function(s){if(s.pro)_g.apply(self,a);else paywall(name,s,a,self)})};
- /* ---- 3D chizish (modul qo‘shish): Pro yoki 3 kunlik bepul sinov ---- */
- var noted=false,BYP=false,DSEL='#presets button,#cat .cd,#tpl button,#utpl .row button:not([title]),#pj_l .row button:not([title]),#kg_go,#ovc_go,#ai_a,#kp_a,#bc,#bm,[data-ta]';
- function note(s){if(noted||!s||s.pro||!s.trial)return;noted=true;var d=Math.max(1,Math.ceil((s.trialUntil-Date.now())/864e5));toast('🎁 Bepul sinov: '+d+' kun qoldi')}
- function guard(run){
-  if(C().off){run();return}
-  var c=cur();
-  if(c){if(drawOK(c)){note(c);run()}else paywall('3D chizish — modul qo‘shish',c,run,null,true);return}
-  toast('Pro holati tekshirilmoqda…');
-  check().then(function(s){if(drawOK(s)){note(s);run()}else paywall('3D chizish — modul qo‘shish',s,run,null,true)})}
- document.addEventListener('click',function(e){
-  if(BYP||C().off)return;
-  var t=e.target&&e.target.closest?e.target.closest(DSEL):null;if(!t)return;
-  var c=cur();if(c&&drawOK(c)){note(c);return}
-  e.stopImmediatePropagation();e.preventDefault();
-  guard(function(){BYP=true;try{t.click()}finally{BYP=false}})},true);
- document.addEventListener('keydown',function(e){
-  if(C().off||!(e.key==='d'||e.key==='D')||!(e.ctrlKey||e.metaKey))return;
-  var c=cur();if(c&&drawOK(c))return;
-  e.stopImmediatePropagation();e.preventDefault();
-  guard(function(){toast('Tekshirildi — Ctrl+D ni qayta bosing')})},true);
- try{var _dm=dupMod;dupMod=function(){var a=arguments,self=this;guard(function(){_dm.apply(self,a)})}}catch(e){}
  window.ustacadPro={check:check,status:cur};
  if(!C().off)setTimeout(function(){check()},1500);
 })();
@@ -3641,10 +3618,10 @@ var prP=S.set.pr=S.set.pr||{};prP.h=prP.h||{};prP.mach=prP.mach||{};prP.cur=prP.
 var prST={conn:false,res:null},pr3=null,prFit=true,prQ=function(s){return document.querySelector(s)};
 function prE(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function prM(k){var kk=k||prP.cur,b=PRC.MACH0[kk]||PRC.MACH0.gen,r=Object.assign({},b,prP.mach[kk]||{});r.locked=b.locked===true;r.why=b.why;r.hpost=b.hpost===true;r.ext=b.ext;return r}
-function prList(){var r=[];S.mods.forEach(function(m){if(m.type==='oval')return;parts(m).forEach(function(p){r.push({key:m.id+'|'+p.name,m:m,p:p,name:m.name+' — '+p.name})})});return r}
+function prList(){var r=[];S.mods.forEach(function(m){parts(m).forEach(function(p){if(m.type==='oval'&&/egma devor/.test(p.name))return;r.push({key:m.id+'|'+p.name,m:m,p:p,name:m.name+' — '+p.name})})});return r}
 function prCur(){var l=prList(),f=l.filter(function(x){return x.key===prP.sel})[0]||l[0];if(f)prP.sel=f.key;return f||null}
 function prHs(c){return c?(prP.h[c.key]=prP.h[c.key]||[]):[]}
-function prPart(c){return{name:c.name,L:c.p.L,W:c.p.W,T:c.p.T||c.m.t||18}}
+function prPart(c){return{name:c.name,L:c.p.L,W:c.p.W,T:c.p.T||c.m.t||18,r:c.p.r||0}}
 function prDirty(){prST.res=null;save()}
 function prSnap(x,y,p){var d=[[x,'x',0],[p.L-x,'x',p.L],[y,'y',0],[p.W-y,'y',p.W]].sort(function(a,b){return a[0]-b[0]})[0];return d[1]==='x'?[d[2],y]:[x,d[2]]}
 function prTpl(id,x,y,p){var V=function(d,z,xx,yy){return{f:'V',x:xx==null?x:xx,y:yy==null?y:yy,d:d,z:z,th:false}},s=prSnap(x,y,p),Hh=function(d,z){return{f:'H',x:s[0],y:s[1],d:d,z:z,th:false}};
@@ -3658,12 +3635,12 @@ function prTpl(id,x,y,p){var V=function(d,z,xx,yy){return{f:'V',x:xx==null?x:xx,
  case'pk':return[V(5,13)]}return[]}
 var PRT=[['kf','Konfirmat — yuza (Ø7 o‘tuvchi)'],['ke','Konfirmat — uch (Ø5×50, gor.)'],['mk','Minifix — kosa (Ø15×12.5)'],['mb','Minifix — boltcha uchi (Ø8×34, gor.)'],['rk','Rafix — kosa (Ø20×12.5)'],['rp','Rafix — pin (Ø6×10, gor.)'],['bk','Blum — petlya kosasi (Ø35×13)'],['bp','Blum — planka (2×Ø5×13, 32 mm)'],['hk','Hettich — petlya kosasi (Ø35×12.5)'],['hp','Hettich — planka (2×Ø5×12, 32 mm)'],['pk','Polka tayanchi (Ø5×13)']];
 function prNear(H,i){var a=H[i],m=Infinity;H.forEach(function(b,j){if(j!==i&&b.f===a.f){var d=Math.hypot(a.x-b.x,a.y-b.y);if(d<m)m=d}});return isFinite(m)?m:null}
-function prImport(c){var p=prPart(c),H=[];holes(c.m,c.p.name,c.p.L,c.p.W).forEach(function(h){var hz=h[0]==='H_DRILL';H.push({f:hz?'H':'V',x:h[1],y:h[2],d:h[3],z:hz?50:(h[3]===35?12.5:(h[3]===7?p.T:13)),th:!hz&&h[3]===7})});return H}
+function prImport(c){var p=prPart(c),H=[];if(c.m.type==='oval')return H;holes(c.m,c.p.name,c.p.L,c.p.W).forEach(function(h){var hz=h[0]==='H_DRILL';H.push({f:hz?'H':'V',x:h[1],y:h[2],d:h[3],z:hz?50:(h[3]===35?12.5:(h[3]===7?p.T:13)),th:!hz&&h[3]===7})});return H}
 function prFmt(v){return PRC.fin(v)?(Math.round(v*100)/100):'—'}
 function prGate(kind,mk){var c=prCur();if(!c){toast('Avval modul qo‘shing');return null}var M=prM(mk),H=prHs(c),p=prPart(c);
  if(M.locked&&(kind==='dxf'||kind==='csv'))M=prM('gen');
  if(M.locked){prST.res={er:[M.why],wn:[],kind:kind,M:M};prShow();toast(String(M.why).slice(0,90));return null}
- var v=PRC.validate(p,H,M,kind);prST.res={er:v.er.slice(),wn:v.wn.slice(),kind:kind,M:M};
+ var v=PRC.validate(p,H,M,kind);v.er=v.er.slice();if(p.r>0)H.forEach(function(h,i){var cx=h.x<p.r?p.r:(h.x>p.L-p.r?p.L-p.r:h.x),cy=h.y<p.r?p.r:(h.y>p.W-p.r?p.W-p.r:h.y);if(Math.hypot(h.x-cx,h.y-cy)>p.r-(h.d||0)/2)v.er.push('Teshik '+(i+1)+' yumaloq burchak (R'+p.r+') tashqarisida');});prST.res={er:v.er.slice(),wn:v.wn.slice(),kind:kind,M:M};
  if(v.er.length){prShow();toast('Xato bor — fayl chiqarilmadi ('+v.er.length+' ta)');return null}return{c:c,p:p,H:H,M:M,v:v}}
 function prNm(c,e){return('prisadka-'+c.name).replace(/[^\w\-.]+/g,'_')+'.'+e}
 function prCode(g){var o=PRC.gcode(g.p,g.H,g.M);
@@ -3736,7 +3713,7 @@ function prWire(){var $=prQ,c;
  $('#pr_add').onclick=function(){c=prCur();if(!c)return toast('Avval modul qo‘shing');var f=$('#pr_f').value,th=$('#pr_th').checked,h={f:f,x:parseFloat($('#pr_x').value),y:parseFloat($('#pr_y').value),d:parseFloat($('#pr_d').value),z:parseFloat($('#pr_z').value),th:th};
   var p=prPart(c);if(th&&f==='V')h.z=p.T;if(!PRC.fin(h.x+h.y+h.d)||!PRC.fin(h.z)){return toast('X, Y, Ø va chuqurlikni kiriting')}if(f==='H'){var s=prSnap(h.x,h.y,p);h.x=s[0];h.y=s[1];h.th=false}prHs(c).push(h);prDirty();prRows();prShow()};
  $('#pr_tadd').onclick=function(){c=prCur();if(!c)return toast('Avval modul qo‘shing');var x=parseFloat($('#pr_tx').value),y=parseFloat($('#pr_ty').value);if(!PRC.fin(x+y))return toast('Shablon X, Y ni kiriting');prTpl($('#pr_tp').value,x,y,prPart(c)).forEach(function(h){prHs(c).push(h)});prDirty();prRows();prShow()};
- $('#pr_imp').onclick=function(){c=prCur();if(!c)return toast('Modul yo‘q');var n=prHs(c).length;if(n&&!confirm('Mavjud '+n+' ta teshik almashtirilsin?'))return;prP.h[c.key]=prImport(c);prDirty();prRows();prShow();toast(prP.h[c.key].length+' ta standart teshik olindi')};
+ $('#pr_imp').onclick=function(){c=prCur();if(!c)return toast('Modul yo‘q');if(c.m.type==='oval')return toast('Oval detal uchun standart teshik yo‘q — qo‘lda qo‘shing');var n=prHs(c).length;if(n&&!confirm('Mavjud '+n+' ta teshik almashtirilsin?'))return;prP.h[c.key]=prImport(c);prDirty();prRows();prShow();toast(prP.h[c.key].length+' ta standart teshik olindi')};
  $('#pr_clr').onclick=function(){c=prCur();if(c&&confirm('Shu detaldagi barcha teshiklar o‘chirilsinmi?')){prP.h[c.key]=[];prDirty();prRows();prShow()}};
    $('#pr_grp').onclick=function(){c=prCur();if(!c)return;var H=prHs(c),sel=[].map.call(document.querySelectorAll('#pr_tb [data-s]:checked'),function(e){return+e.dataset.s}),n=parseInt($('#pr_gn').value),dx=parseFloat($('#pr_gx').value)||0,dy=parseFloat($('#pr_gy').value)||0;
    if(!sel.length)return toast('Jadvalda teshiklarni belgilang');if(!(n>=1&&n<=100))return toast('Soni 1–100');if(H.length+sel.length*n>2000)return toast('Teshiklar soni 2000 dan oshadi');
