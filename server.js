@@ -47,10 +47,52 @@ function loadPro(file) {
   catch (e) { return {}; }
 }
 function saveJson(file, obj) {
+  scheduleRemote();
   try { fs.mkdirSync(path.dirname(file), { recursive: true }); const tmp = file + '.tmp'; fs.writeFileSync(tmp, JSON.stringify(obj, null, 1)); fs.renameSync(tmp, file); return true; }
   catch (e) { console.error(path.basename(file) + ' saqlanmadi:', e && e.message); return false; }
 }
 function savePro(cfg) { return saveJson(cfg.proFile, cfg.dynPro); }
+
+/* ===================== BULUT SAQLASH (Upstash Redis REST) =====================
+ * Render'ning bepul tarifida fayllar server qayta ishga tushganda o'chadi. Shuning uchun Pro, sinov, taklif va
+ * statistika bulutga ham nusxalanadi va server ishga tushganda qaytariladi.
+ *   UPSTASH_REDIS_REST_URL=https://xxxx.upstash.io   UPSTASH_REDIS_REST_TOKEN=...   (upstash.com — bepul)
+ */
+let ACTIVE = null, remoteTimer = null;
+const remoteOn = (cfg) => !!(cfg && cfg.kvUrl && cfg.kvToken);
+async function kvCmd(cfg, cmd) {
+  const ac = new AbortController(); const tm = setTimeout(() => ac.abort(), 10000);
+  try {
+    const r = await fetch(cfg.kvUrl, { method: 'POST', headers: { Authorization: 'Bearer ' + cfg.kvToken, 'Content-Type': 'application/json' }, body: JSON.stringify(cmd), signal: ac.signal });
+    const j = await r.json().catch(() => null);
+    if (!r.ok || !j || j.error) throw new Error((j && j.error) || ('HTTP ' + r.status));
+    return j.result;
+  } finally { clearTimeout(tm); }
+}
+async function pushRemote(cfg) {
+  if (!remoteOn(cfg)) return false;
+  try { await kvCmd(cfg, ['SET', cfg.kvKey, JSON.stringify({ v: 1, pro: cfg.dynPro, trials: cfg.trials, refs: cfg.refs, users: cfg.users })]); return true; }
+  catch (e) { console.error('Bulutga saqlanmadi:', e && e.message); return false; }
+}
+function scheduleRemote() {
+  if (!remoteOn(ACTIVE) || remoteTimer) return;
+  remoteTimer = setTimeout(() => { remoteTimer = null; pushRemote(ACTIVE); }, 1500);
+}
+async function restoreRemote(cfg) {
+  if (!remoteOn(cfg)) { console.log('Bulut saqlash: o\'chiq (UPSTASH_* berilmagan) — Render\'da ma\'lumot yo\'qolishi mumkin!'); return false; }
+  try {
+    const raw = await kvCmd(cfg, ['GET', cfg.kvKey]);
+    if (raw) {
+      const s = JSON.parse(raw);
+      Object.assign(cfg.dynPro, s.pro || {}); Object.assign(cfg.trials, s.trials || {});
+      Object.assign(cfg.refs, s.refs || {}); Object.assign(cfg.users, s.users || {});
+      saveJson(cfg.proFile, cfg.dynPro); saveJson(cfg.trialFile, cfg.trials); saveJson(cfg.refFile, cfg.refs); saveJson(cfg.usersFile, cfg.users);
+      console.log('Bulutdan tiklandi: Pro ' + Object.keys(cfg.dynPro).length + ', foydalanuvchi ' + Object.keys(cfg.users).length);
+    } else console.log('Bulutda ma\'lumot yo\'q — birinchi nusxa yuboriladi');
+    await pushRemote(cfg);
+    return true;
+  } catch (e) { console.error('Bulutdan tiklab bo\'lmadi:', e && e.message); return false; }
+}
 
 /* ===================== STATISTIKA: noyob foydalanuvchilar ===================== */
 /* users.json: { "<telegram_id>": { first, last, bot, app } }  — first/last = vaqt (ms), bot = bot xabarlari soni, app = ilova ochilishlar soni */
@@ -103,6 +145,7 @@ function statsText(cfg) {
     '⭐ Faol Pro: ' + s.pro + '\n' +
     '🎁 Bepul sinov boshlaganlar: ' + s.trials + '\n' +
     '🤝 Takliflar: ' + s.refs + ' (obuna olgani: ' + s.refsPaid + ')' +
+    '\n\n💾 Saqlash: ' + (remoteOn(cfg) ? 'bulut (Upstash) + disk' : '⚠️ faqat disk — Render qayta ishga tushsa Pro/statistika yo\'qoladi!') +
     '\n\nEslatma: sanoq statistika yoqilgandan boshlanadi. Eski foydalanuvchilar faqat sinov/Pro/taklif fayllarida bo\'lsa qo\'shilgan.';
 }
 
@@ -150,9 +193,13 @@ function cfgFromEnv(env) {
     botUsername: String(env.BOT_USERNAME || '').trim().replace(/^@/, ''),
     trials: loadPro(path.resolve(env.TRIAL_FILE || path.join(path.dirname(path.resolve(env.PRO_FILE || './pro.json')), 'trials.json'))),
     usersFile: path.resolve(env.USERS_FILE || path.join(path.dirname(path.resolve(env.PRO_FILE || './pro.json')), 'users.json')),
+    kvUrl: String(env.UPSTASH_REDIS_REST_URL || '').trim().replace(/\/+$/, ''),
+    kvToken: String(env.UPSTASH_REDIS_REST_TOKEN || '').trim(),
+    kvKey: String(env.KV_KEY || 'ustacad:state').trim(),
     tgBase: String(env.TELEGRAM_API_BASE || 'https://api.telegram.org').replace(/\/+$/, ''),
     tgTimeout: num('TELEGRAM_TIMEOUT_MS', 20000)
   };
+  ACTIVE = cfg;
   cfg.users = loadPro(cfg.usersFile);
   cfg._usersDirty = false;
   /* Eski foydalanuvchilarni (sinov/Pro/taklif fayllaridan) bir marta qo'shib qo'yamiz, shunda sanoq 0 dan boshlanmaydi */
@@ -483,11 +530,11 @@ function start(cfg) {
   return new Promise((resolve) => server.listen(cfg.port, cfg.host, () => resolve(server)));
 }
 
-module.exports = { setupBot, handleBotMessage, grantPro, cfgFromEnv, createApp, start, verifyInitData, originAllowed, proStatus, statsOf, touchUser };
+module.exports = { setupBot, handleBotMessage, grantPro, cfgFromEnv, createApp, start, verifyInitData, originAllowed, proStatus, statsOf, touchUser, restoreRemote, pushRemote };
 
 if (require.main === module) {
   const cfg = cfgFromEnv();
-  const bye = () => { flushUsers(cfg); process.exit(0); }; // Render qayta ishga tushirganda sanoq yo'qolmasin
+  const bye = () => { flushUsers(cfg); Promise.race([pushRemote(cfg), new Promise(r => setTimeout(r, 4000))]).then(() => process.exit(0)); }; // Render qayta ishga tushirganda sanoq yo'qolmasin
   process.on('SIGTERM', bye); process.on('SIGINT', bye);
-  start(cfg).then((s) => { setupBot(cfg).catch((e) => console.error('Bot sozlash xatosi:', e && e.message)); return s; }).then((s) => console.log('UstaCAD server ' + VERSION + ' http://' + cfg.host + ':' + s.address().port + '  (telegram: ' + (cfg.tgToken ? 'yoqilgan' : 'sozlanmagan') + ')'));
+  restoreRemote(cfg).catch(() => false).then(() => start(cfg)).then((s) => { setupBot(cfg).catch((e) => console.error('Bot sozlash xatosi:', e && e.message)); return s; }).then((s) => console.log('UstaCAD server ' + VERSION + ' http://' + cfg.host + ':' + s.address().port + '  (telegram: ' + (cfg.tgToken ? 'yoqilgan' : 'sozlanmagan') + ')'));
 }
