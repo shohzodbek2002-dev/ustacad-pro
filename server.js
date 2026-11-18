@@ -25,6 +25,7 @@
  *   WEBAPP_URL=https://sizning-sayt.uz/index.html    Mini App manzili (/start dagi tugma va menyu tugmasi)
  *   PRO_PRICE="50 000 so'm / oy"  PRO_CONTACT="@admin_username"   (/pro javobida ko'rinadi)
  *   PRO_FILE=./pro.json             /grant bilan berilgan Pro'lar shu faylda saqlanadi (Render'da Disk ulang!)
+ *   TRIAL_DAYS=3                    3D chizish (modul qo'shish) uchun bepul sinov kunlari (0 = sinov yo'q). TRIAL_FILE=./trials.json
  *   WEBHOOK_SECRET=...              ixtiyoriy; bo'sh bo'lsa tokendan avtomatik hosil qilinadi
  *
  * DIQQAT: server stanokni O'ZI ishga tushirmaydi — faylni qabul qilib saqlaydi, xolos.
@@ -42,9 +43,23 @@ function loadPro(file) {
   try { const o = JSON.parse(fs.readFileSync(file, 'utf8')); return (o && typeof o === 'object' && !Array.isArray(o)) ? o : {}; }
   catch (e) { return {}; }
 }
-function savePro(cfg) {
-  try { fs.mkdirSync(path.dirname(cfg.proFile), { recursive: true }); const tmp = cfg.proFile + '.tmp'; fs.writeFileSync(tmp, JSON.stringify(cfg.dynPro, null, 1)); fs.renameSync(tmp, cfg.proFile); return true; }
-  catch (e) { console.error('pro.json saqlanmadi:', e && e.message); return false; }
+function saveJson(file, obj) {
+  try { fs.mkdirSync(path.dirname(file), { recursive: true }); const tmp = file + '.tmp'; fs.writeFileSync(tmp, JSON.stringify(obj, null, 1)); fs.renameSync(tmp, file); return true; }
+  catch (e) { console.error(path.basename(file) + ' saqlanmadi:', e && e.message); return false; }
+}
+function savePro(cfg) { return saveJson(cfg.proFile, cfg.dynPro); }
+
+/* 3D chizish (modul qo'shish) uchun bepul sinov: birinchi kirgan paytdan TRIAL_DAYS kun (standart 3). Faqat serverda hisoblanadi. */
+function trialState(cfg, id, create) {
+  if (!cfg.trialDays || !id) return { trial: false, trialUntil: 0 };
+  id = String(id);
+  let t = Number(cfg.trials[id]);
+  if (!(t > 0)) {
+    if (!create) return { trial: false, trialUntil: 0 };
+    t = cfg.trials[id] = Date.now(); saveJson(cfg.trialFile, cfg.trials);
+  }
+  const until = t + cfg.trialDays * 864e5;
+  return { trial: Date.now() < until, trialUntil: until };
 }
 
 function cfgFromEnv(env) {
@@ -70,6 +85,9 @@ function cfgFromEnv(env) {
     proContact: String(env.PRO_CONTACT || '').trim(),
     hookSecret: String(env.WEBHOOK_SECRET || '').trim(),
     dynPro: loadPro(path.resolve(env.PRO_FILE || './pro.json')),
+    trialDays: (env.TRIAL_DAYS !== undefined && env.TRIAL_DAYS !== '' && Number.isFinite(Number(env.TRIAL_DAYS)) && Number(env.TRIAL_DAYS) >= 0) ? Number(env.TRIAL_DAYS) : 3,
+    trialFile: path.resolve(env.TRIAL_FILE || path.join(path.dirname(path.resolve(env.PRO_FILE || './pro.json')), 'trials.json')),
+    trials: loadPro(path.resolve(env.TRIAL_FILE || path.join(path.dirname(path.resolve(env.PRO_FILE || './pro.json')), 'trials.json'))),
     tgBase: String(env.TELEGRAM_API_BASE || 'https://api.telegram.org').replace(/\/+$/, ''),
     tgTimeout: num('TELEGRAM_TIMEOUT_MS', 20000)
   };
@@ -173,6 +191,8 @@ function appButton(cfg) {
 function proInfo(cfg, id) {
   let t = proLine(cfg, id) + '\n🆔 Sizning ID: ' + id;
   if (!proStatus(cfg, id).pro) {
+    const tr = trialState(cfg, id, true);
+    if (cfg.trialDays) t += tr.trial ? '\n🎁 Bepul sinov (3D chizish): ' + Math.max(1, Math.ceil((tr.trialUntil - Date.now()) / 864e5)) + ' kun qoldi' : '\n⌛ Bepul sinov tugagan — 3D chizish uchun Pro kerak';
     t += '\n\nPro tarifda: raskroy, DXF, Excel, yorliq, CNC fayllarini yuklab olish ochiladi.';
     if (cfg.proPrice) t += '\n💰 Narxi: ' + cfg.proPrice;
     t += '\n💳 Pro olish uchun to\'lov qilib, ID raqamingizni' + (cfg.proContact ? ' ' + cfg.proContact + ' ga' : ' adminga') + ' yuboring.';
@@ -296,7 +316,9 @@ function createApp(cfg) {
   async function handlePro(req, res, cors) {
     const form = await readForm(req, cfg);
     const user = verifyInitData(String(form.get('initData') || ''), cfg.tgToken);
-    send(res, 200, Object.assign({ ok: true, id: user ? String(user.id) : null }, proStatus(cfg, user && user.id)), cors);
+    const pro = proStatus(cfg, user && user.id);
+    const tr = (!pro.pro && user) ? trialState(cfg, user.id, true) : { trial: false, trialUntil: 0 };
+    send(res, 200, Object.assign({ ok: true, id: user ? String(user.id) : null }, pro, tr), cors);
   }
 
   async function handleHook(req, res) {
