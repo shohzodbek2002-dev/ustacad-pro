@@ -17,16 +17,17 @@
  *   PRO_IDS="5023880281,111222333:2026-12-31"   Pro tarif ochilgan Telegram ID'lar (vergul bilan).
  *            "ID:YYYY-MM-DD" = shu sanagacha (shu kun ham kiradi). "*" = hamma uchun Pro (qulf o'chiq).
  *
- *   POST /tg-hook    -> Telegram bot webhook (bot buyruqlari: /start /pro /id, admin: /grant /revoke /list)
+ *   POST /tg-hook    -> Telegram bot webhook (bot buyruqlari: /start /pro /id, admin: /grant /revoke /list /stats)
  *
  * BOT ORQALI PRO BOSHQARUV (yangi):
- *   ADMIN_IDS="5023880281"          admin Telegram ID'lari (vergul bilan) — faqat ular /grant /revoke /list ishlata oladi
+ *   ADMIN_IDS="5023880281"          admin Telegram ID'lari (vergul bilan) — faqat ular /grant /revoke /list /stats ishlata oladi
  *   PUBLIC_URL=https://ustacad-server.onrender.com   shu serverning ochiq manzili (webhook avtomatik o'rnatiladi)
  *   WEBAPP_URL=https://sizning-sayt.uz/index.html    Mini App manzili (/start dagi tugma va menyu tugmasi)
  *   PRO_PRICE="50 000 so'm / oy"  PRO_CONTACT="@admin_username"   (/pro javobida ko'rinadi)
  *   PRO_FILE=./pro.json             /grant bilan berilgan Pro'lar shu faylda saqlanadi (Render'da Disk ulang!)
  *   TRIAL_DAYS=3                    3D chizish (modul qo'shish) uchun bepul sinov kunlari (0 = sinov yo'q). TRIAL_FILE=./trials.json
  *   REF_BONUS_DAYS=7                do'sti 1 oylik (30+ kun) obuna olganda taklif qilganga beriladigan bonus kunlar. REF_FILE=./refs.json
+ *   USERS_FILE=./users.json         STATISTIKA: noyob foydalanuvchilar shu faylda saqlanadi (faqat Telegram ID, vaqt va sanoq). Disk ulang!
  *   BOT_USERNAME=bot_nomi           ixtiyoriy (bo'sh bo'lsa getMe orqali avtomatik topiladi)
  *   WEBHOOK_SECRET=...              ixtiyoriy; bo'sh bo'lsa tokendan avtomatik hosil qilinadi
  *
@@ -51,6 +52,60 @@ function saveJson(file, obj) {
 }
 function savePro(cfg) { return saveJson(cfg.proFile, cfg.dynPro); }
 
+/* ===================== STATISTIKA: noyob foydalanuvchilar ===================== */
+/* users.json: { "<telegram_id>": { first, last, bot, app } }  — first/last = vaqt (ms), bot = bot xabarlari soni, app = ilova ochilishlar soni */
+function flushUsers(cfg) {
+  if (!cfg._usersDirty) return;
+  if (saveJson(cfg.usersFile, cfg.users)) cfg._usersDirty = false;
+}
+function touchUser(cfg, id, src) {
+  if (!id || !cfg.users) return;
+  id = String(id);
+  if (!/^\d{3,15}$/.test(id)) return;
+  const now = Date.now();
+  let u = cfg.users[id];
+  const isNew = !u;
+  if (!u) u = cfg.users[id] = { first: now, last: now, bot: 0, app: 0 };
+  u.last = now;
+  u[src] = (Number(u[src]) || 0) + 1;
+  cfg._usersDirty = true;
+  if (isNew) flushUsers(cfg); // yangi odam darhol saqlanadi, qolganlari har 60 soniyada
+}
+function statsOf(cfg) {
+  const now = Date.now(), DAY = 864e5, all = Object.values(cfg.users);
+  const cnt = (f) => all.filter(f).length;
+  const proIds = new Set(Object.keys(cfg.dynPro).concat(cfg.proIds.map(x => x.split(':')[0]).filter(x => /^\d+$/.test(x))));
+  let pro = 0; for (const id of proIds) if (proStatus(cfg, id).pro) pro++;
+  const refs = Object.values(cfg.refs);
+  return {
+    total: all.length,
+    new24: cnt(u => now - u.first < DAY),
+    new7: cnt(u => now - u.first < 7 * DAY),
+    act24: cnt(u => now - u.last < DAY),
+    act7: cnt(u => now - u.last < 7 * DAY),
+    act30: cnt(u => now - u.last < 30 * DAY),
+    botUsers: cnt(u => u.bot > 0),
+    appUsers: cnt(u => u.app > 0),
+    pro,
+    trials: Object.keys(cfg.trials).length,
+    refs: refs.length,
+    refsPaid: refs.filter(r => r && r.rewarded).length
+  };
+}
+function statsText(cfg) {
+  const s = statsOf(cfg);
+  return '📊 UstaCAD statistikasi\n\n' +
+    '👥 Jami foydalanuvchi: ' + s.total + '\n' +
+    '🆕 Yangi: 24 soatda ' + s.new24 + ', 7 kunda ' + s.new7 + '\n' +
+    '🔥 Faol: 24 soatda ' + s.act24 + ', 7 kunda ' + s.act7 + ', 30 kunda ' + s.act30 + '\n\n' +
+    '🤖 Botga yozganlar: ' + s.botUsers + '\n' +
+    '🛠 Ilovani ochganlar: ' + s.appUsers + '\n' +
+    '⭐ Faol Pro: ' + s.pro + '\n' +
+    '🎁 Bepul sinov boshlaganlar: ' + s.trials + '\n' +
+    '🤝 Takliflar: ' + s.refs + ' (obuna olgani: ' + s.refsPaid + ')' +
+    '\n\nEslatma: sanoq statistika yoqilgandan boshlanadi. Eski foydalanuvchilar faqat sinov/Pro/taklif fayllarida bo\'lsa qo\'shilgan.';
+}
+
 /* 3D chizish (modul qo'shish) uchun bepul sinov: birinchi kirgan paytdan TRIAL_DAYS kun (standart 3). Faqat serverda hisoblanadi. */
 function trialState(cfg, id, create) {
   if (!cfg.trialDays || !id) return { trial: false, trialUntil: 0 };
@@ -68,7 +123,7 @@ function cfgFromEnv(env) {
   env = env || process.env;
   const num = (k, d) => { const v = Number(env[k]); return Number.isFinite(v) && v > 0 ? v : d; };
   const list = (k) => String(env[k] || '').split(',').map(s => s.trim()).filter(Boolean);
-  return {
+  const cfg = {
     port: (env.PORT !== undefined && env.PORT !== '' && Number.isInteger(Number(env.PORT)) && Number(env.PORT) >= 0 && Number(env.PORT) < 65536) ? Number(env.PORT) : 8080,
     host: env.HOST || '127.0.0.1',
     origins: list('ALLOWED_ORIGINS'),
@@ -94,9 +149,19 @@ function cfgFromEnv(env) {
     refBonusDays: (Number.isInteger(Number(env.REF_BONUS_DAYS)) && Number(env.REF_BONUS_DAYS) > 0) ? Number(env.REF_BONUS_DAYS) : 7,
     botUsername: String(env.BOT_USERNAME || '').trim().replace(/^@/, ''),
     trials: loadPro(path.resolve(env.TRIAL_FILE || path.join(path.dirname(path.resolve(env.PRO_FILE || './pro.json')), 'trials.json'))),
+    usersFile: path.resolve(env.USERS_FILE || path.join(path.dirname(path.resolve(env.PRO_FILE || './pro.json')), 'users.json')),
     tgBase: String(env.TELEGRAM_API_BASE || 'https://api.telegram.org').replace(/\/+$/, ''),
     tgTimeout: num('TELEGRAM_TIMEOUT_MS', 20000)
   };
+  cfg.users = loadPro(cfg.usersFile);
+  cfg._usersDirty = false;
+  /* Eski foydalanuvchilarni (sinov/Pro/taklif fayllaridan) bir marta qo'shib qo'yamiz, shunda sanoq 0 dan boshlanmaydi */
+  const seed = (id, t) => { id = String(id); if (/^\d{3,15}$/.test(id) && !cfg.users[id]) { cfg.users[id] = { first: t, last: t, bot: 0, app: 0, old: 1 }; cfg._usersDirty = true; } };
+  for (const [id, t] of Object.entries(cfg.trials)) seed(id, Number(t) || Date.now());
+  for (const id of Object.keys(cfg.dynPro)) seed(id, Date.now());
+  for (const [id, r] of Object.entries(cfg.refs)) { seed(id, (r && r.t) || Date.now()); if (r && r.by) seed(r.by, r.t || Date.now()); }
+  flushUsers(cfg);
+  return cfg;
 }
 
 class HttpErr extends Error { constructor(status, msg) { super(msg); this.status = status; } }
@@ -243,6 +308,7 @@ function grantPro(cfg, id, days) {
 async function handleBotMessage(cfg, m) {
   if (!m || !m.from || !m.chat || m.chat.type !== 'private' || typeof m.text !== 'string') return;
   const uid = String(m.from.id), chat = m.chat.id;
+  touchUser(cfg, uid, 'bot'); // statistika: botga yozgan har bir odam
   const parts = m.text.trim().split(/\s+/);
   const cmd = parts[0].split('@')[0].toLowerCase();
   const admin = cfg.admins.includes(uid);
@@ -259,10 +325,11 @@ async function handleBotMessage(cfg, m) {
   }
   if (cmd === '/pro' || cmd === '/status') return say(cfg, chat, proInfo(cfg, uid), appButton(cfg));
   if (cmd === '/help') {
-    return say(cfg, chat, '/start — ilovani ochish\n/pro — Pro holatim va narx\n/taklif — do\'st taklif qilib bonus olish\n/id — Telegram ID' + (admin ? '\n\nAdmin:\n/grant ID KUN — Pro berish (KUN yoki "cheksiz")\n/revoke ID — Pro olib tashlash\n/list — Pro foydalanuvchilar' : ''));
+    return say(cfg, chat, '/start — ilovani ochish\n/pro — Pro holatim va narx\n/taklif — do\'st taklif qilib bonus olish\n/id — Telegram ID' + (admin ? '\n\nAdmin:\n/stats — foydalanuvchilar statistikasi\n/grant ID KUN — Pro berish (KUN yoki "cheksiz")\n/revoke ID — Pro olib tashlash\n/list — Pro foydalanuvchilar' : ''));
   }
   if (!admin) return;
 
+  if (cmd === '/stats') return say(cfg, chat, statsText(cfg));
   if (cmd === '/grant') {
     const id = parts[1] || '', d = (parts[2] || '').toLowerCase();
     if (!/^\d{4,15}$/.test(id)) return say(cfg, chat, 'Format: /grant ID KUN\nMasalan: /grant 5023880281 30  yoki  /grant 5023880281 cheksiz');
@@ -360,6 +427,7 @@ function createApp(cfg) {
   async function handlePro(req, res, cors) {
     const form = await readForm(req, cfg);
     const user = verifyInitData(String(form.get('initData') || ''), cfg.tgToken);
+    if (user) touchUser(cfg, user.id, 'app'); // statistika: ilovani ochgan (imzosi tekshirilgan) foydalanuvchi
     const pro = proStatus(cfg, user && user.id);
     const tr = (!pro.pro && user) ? trialState(cfg, user.id, true) : { trial: false, trialUntil: 0 };
     send(res, 200, Object.assign({ ok: true, id: user ? String(user.id) : null }, pro, tr), cors);
@@ -410,12 +478,16 @@ function start(cfg) {
   server.requestTimeout = cfg.reqTimeout + 5000;
   server.headersTimeout = Math.min(cfg.reqTimeout, 15000);
   server.keepAliveTimeout = 5000;
+  const timer = setInterval(() => flushUsers(cfg), 60000); // statistikani har daqiqada diskka yozish
+  if (timer.unref) timer.unref();
   return new Promise((resolve) => server.listen(cfg.port, cfg.host, () => resolve(server)));
 }
 
-module.exports = { setupBot, handleBotMessage, grantPro, cfgFromEnv, createApp, start, verifyInitData, originAllowed, proStatus };
+module.exports = { setupBot, handleBotMessage, grantPro, cfgFromEnv, createApp, start, verifyInitData, originAllowed, proStatus, statsOf, touchUser };
 
 if (require.main === module) {
   const cfg = cfgFromEnv();
+  const bye = () => { flushUsers(cfg); process.exit(0); }; // Render qayta ishga tushirganda sanoq yo'qolmasin
+  process.on('SIGTERM', bye); process.on('SIGINT', bye);
   start(cfg).then((s) => { setupBot(cfg).catch((e) => console.error('Bot sozlash xatosi:', e && e.message)); return s; }).then((s) => console.log('UstaCAD server ' + VERSION + ' http://' + cfg.host + ':' + s.address().port + '  (telegram: ' + (cfg.tgToken ? 'yoqilgan' : 'sozlanmagan') + ')'));
 }
