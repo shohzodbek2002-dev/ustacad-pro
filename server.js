@@ -26,6 +26,8 @@
  *   PRO_PRICE="50 000 so'm / oy"  PRO_CONTACT="@admin_username"   (/pro javobida ko'rinadi)
  *   PRO_FILE=./pro.json             /grant bilan berilgan Pro'lar shu faylda saqlanadi (Render'da Disk ulang!)
  *   TRIAL_DAYS=3                    3D chizish (modul qo'shish) uchun bepul sinov kunlari (0 = sinov yo'q). TRIAL_FILE=./trials.json
+ *   REF_BONUS_DAYS=7                do'sti 1 oylik (30+ kun) obuna olganda taklif qilganga beriladigan bonus kunlar. REF_FILE=./refs.json
+ *   BOT_USERNAME=bot_nomi           ixtiyoriy (bo'sh bo'lsa getMe orqali avtomatik topiladi)
  *   WEBHOOK_SECRET=...              ixtiyoriy; bo'sh bo'lsa tokendan avtomatik hosil qilinadi
  *
  * DIQQAT: server stanokni O'ZI ishga tushirmaydi — faylni qabul qilib saqlaydi, xolos.
@@ -87,6 +89,10 @@ function cfgFromEnv(env) {
     dynPro: loadPro(path.resolve(env.PRO_FILE || './pro.json')),
     trialDays: (env.TRIAL_DAYS !== undefined && env.TRIAL_DAYS !== '' && Number.isFinite(Number(env.TRIAL_DAYS)) && Number(env.TRIAL_DAYS) >= 0) ? Number(env.TRIAL_DAYS) : 3,
     trialFile: path.resolve(env.TRIAL_FILE || path.join(path.dirname(path.resolve(env.PRO_FILE || './pro.json')), 'trials.json')),
+    refFile: path.resolve(env.REF_FILE || path.join(path.dirname(path.resolve(env.PRO_FILE || './pro.json')), 'refs.json')),
+    refs: loadPro(path.resolve(env.REF_FILE || path.join(path.dirname(path.resolve(env.PRO_FILE || './pro.json')), 'refs.json'))),
+    refBonusDays: (Number.isInteger(Number(env.REF_BONUS_DAYS)) && Number(env.REF_BONUS_DAYS) > 0) ? Number(env.REF_BONUS_DAYS) : 7,
+    botUsername: String(env.BOT_USERNAME || '').trim().replace(/^@/, ''),
     trials: loadPro(path.resolve(env.TRIAL_FILE || path.join(path.dirname(path.resolve(env.PRO_FILE || './pro.json')), 'trials.json'))),
     tgBase: String(env.TELEGRAM_API_BASE || 'https://api.telegram.org').replace(/\/+$/, ''),
     tgTimeout: num('TELEGRAM_TIMEOUT_MS', 20000)
@@ -197,7 +203,34 @@ function proInfo(cfg, id) {
     if (cfg.proPrice) t += '\n💰 Narxi: ' + cfg.proPrice;
     t += '\n💳 Pro olish uchun to\'lov qilib, ID raqamingizni' + (cfg.proContact ? ' ' + cfg.proContact + ' ga' : ' adminga') + ' yuboring.';
   }
+  t += '\n\n🤝 Do\'st taklif qiling, +' + cfg.refBonusDays + ' kun Pro oling: /taklif';
   return t;
+}
+
+/* ---- Taklif tizimi: do'st 1 oylik obuna olsa, taklif qilgan odamga +REF_BONUS_DAYS kun Pro ---- */
+function refLink(cfg, id) { return cfg.botUsername ? 'https://t.me/' + cfg.botUsername + '?start=ref_' + id : null; }
+function refStats(cfg, id) {
+  let n = 0, ok = 0;
+  for (const v of Object.values(cfg.refs)) if (v && v.by === String(id)) { n++; if (v.rewarded) ok++; }
+  return { n, ok };
+}
+function registerRef(cfg, invitee, inviter) {
+  invitee = String(invitee); inviter = String(inviter);
+  if (invitee === inviter || (cfg.refs[inviter] && cfg.refs[inviter].by === invitee) || cfg.refs[invitee] || cfg.trials[invitee] || proStatus(cfg, invitee).pro) return false; // faqat yangi foydalanuvchi
+  cfg.refs[invitee] = { by: inviter, t: Date.now(), rewarded: false };
+  saveJson(cfg.refFile, cfg.refs);
+  return true;
+}
+async function rewardRef(cfg, invitee) {
+  const r = cfg.refs[String(invitee)];
+  if (!r || r.rewarded) return null;
+  r.rewarded = true; r.rt = Date.now();
+  const inv = r.by, unlimited = cfg.dynPro[inv] === '';
+  if (!unlimited) grantPro(cfg, inv, cfg.refBonusDays);
+  saveJson(cfg.refFile, cfg.refs);
+  const st = proStatus(cfg, inv);
+  await say(cfg, inv, '🎁 Taklif bonusi! Siz taklif qilgan do\'stingiz 1 oylik obuna oldi.' + (unlimited ? '' : '\nSizga +' + cfg.refBonusDays + ' kun Pro qo\'shildi' + (st.until ? ' (' + st.until + ' gacha)' : '') + '.'));
+  return { inviter: inv, unlimited };
 }
 
 function grantPro(cfg, id, days) {
@@ -214,10 +247,19 @@ async function handleBotMessage(cfg, m) {
   const cmd = parts[0].split('@')[0].toLowerCase();
   const admin = cfg.admins.includes(uid);
 
-  if (cmd === '/start' || cmd === '/id') return say(cfg, chat, '👋 UstaCAD botiga xush kelibsiz!\n\n' + proInfo(cfg, uid), appButton(cfg));
+  if (cmd === '/start' || cmd === '/id') {
+    const mm = /^ref_(\d{4,15})$/.exec(parts[1] || '');
+    if (cmd === '/start' && mm && registerRef(cfg, uid, mm[1])) say(cfg, mm[1], '👤 Sizning havolangiz orqali yangi foydalanuvchi qo\'shildi. U 1 oylik obuna olsa, sizga +' + cfg.refBonusDays + ' kun Pro beriladi!');
+    return say(cfg, chat, '👋 UstaCAD botiga xush kelibsiz!\n\n' + proInfo(cfg, uid), appButton(cfg));
+  }
+  if (cmd === '/taklif' || cmd === '/invite') {
+    trialState(cfg, uid, true); // botdan foydalangan odam "yangi" hisoblanmaydi
+    const l = refLink(cfg, uid), st = refStats(cfg, uid);
+    return say(cfg, chat, '🤝 Do\'st taklif qiling!\n\nSizning havolangiz:\n' + (l || '(bot nomi hali aniqlanmadi — birozdan keyin urinib ko\'ring)') + '\n\nTaklif qilgan do\'stingiz 1 oylik obuna olsa, sizga +' + cfg.refBonusDays + ' kun Pro beriladi.\n\n👥 Taklif qilinganlar: ' + st.n + '\n✅ Obuna olganlar: ' + st.ok + '\n🎁 Olingan bonus: ' + st.ok * cfg.refBonusDays + ' kun');
+  }
   if (cmd === '/pro' || cmd === '/status') return say(cfg, chat, proInfo(cfg, uid), appButton(cfg));
   if (cmd === '/help') {
-    return say(cfg, chat, '/start — ilovani ochish\n/pro — Pro holatim va narx\n/id — Telegram ID' + (admin ? '\n\nAdmin:\n/grant ID KUN — Pro berish (KUN yoki "cheksiz")\n/revoke ID — Pro olib tashlash\n/list — Pro foydalanuvchilar' : ''));
+    return say(cfg, chat, '/start — ilovani ochish\n/pro — Pro holatim va narx\n/taklif — do\'st taklif qilib bonus olish\n/id — Telegram ID' + (admin ? '\n\nAdmin:\n/grant ID KUN — Pro berish (KUN yoki "cheksiz")\n/revoke ID — Pro olib tashlash\n/list — Pro foydalanuvchilar' : ''));
   }
   if (!admin) return;
 
@@ -228,7 +270,8 @@ async function handleBotMessage(cfg, m) {
     if (d !== 'cheksiz') { days = Number(d); if (!Number.isInteger(days) || days < 1 || days > 3650) return say(cfg, chat, 'KUN 1 dan 3650 gacha butun son yoki "cheksiz" bo\'lsin.'); }
     const saved = grantPro(cfg, id, days);
     const st = proStatus(cfg, id);
-    await say(cfg, chat, '✅ ' + id + ' ga Pro berildi: ' + (st.until ? st.until + ' gacha' : 'cheksiz') + (saved ? '' : '\n⚠️ Faylga saqlab bo\'lmadi — server qayta ishga tushsa yo\'qoladi.'));
+    const rb = (days !== null && days >= 30) ? await rewardRef(cfg, id) : null; // 1 oylik obuna -> taklif qilgan odamga bonus
+    await say(cfg, chat, '✅ ' + id + ' ga Pro berildi: ' + (st.until ? st.until + ' gacha' : 'cheksiz') + (saved ? '' : '\n⚠️ Faylga saqlab bo\'lmadi — server qayta ishga tushsa yo\'qoladi.') + (rb ? '\n🎁 Taklif bonusi: ' + rb.inviter + (rb.unlimited ? ' (allaqachon cheksiz Pro)' : ' ga +' + cfg.refBonusDays + ' kun') : ''));
     return say(cfg, id, '🎉 Pro tarif yoqildi: ' + (st.until ? st.until + ' gacha' : 'cheksiz') + '.\nIlovani qayta oching.', appButton(cfg));
   }
   if (cmd === '/revoke') {
@@ -247,11 +290,12 @@ async function handleBotMessage(cfg, m) {
 /* Serverni ishga tushirganda: webhook, buyruqlar ro'yxati va menyu tugmasini o'rnatadi */
 async function setupBot(cfg) {
   if (!cfg.tgToken) return;
+  if (!cfg.botUsername) { const me = await tgCall(cfg, 'getMe', {}); if (me && me.ok && me.result && me.result.username) cfg.botUsername = me.result.username; }
   if (cfg.publicUrl) {
     const r = await tgCall(cfg, 'setWebhook', { url: cfg.publicUrl + '/tg-hook', secret_token: hookSecret(cfg), allowed_updates: ['message'], drop_pending_updates: false });
     console.log('Telegram webhook:', r && r.ok ? 'o\'rnatildi' : 'XATO ' + JSON.stringify(r));
   } else console.log('Telegram webhook: PUBLIC_URL berilmagan — bot buyruqlari ishlamaydi');
-  await tgCall(cfg, 'setMyCommands', { commands: [{ command: 'start', description: 'UstaCAD ni ochish' }, { command: 'pro', description: 'Pro holatim va narx' }, { command: 'id', description: 'Telegram ID' }, { command: 'help', description: 'Yordam' }] });
+  await tgCall(cfg, 'setMyCommands', { commands: [{ command: 'start', description: 'UstaCAD ni ochish' }, { command: 'pro', description: 'Pro holatim va narx' }, { command: 'taklif', description: 'Do\'st taklif qilib bonus olish' }, { command: 'id', description: 'Telegram ID' }, { command: 'help', description: 'Yordam' }] });
   if (cfg.webappUrl) await tgCall(cfg, 'setChatMenuButton', { menu_button: { type: 'web_app', text: 'UstaCAD', web_app: { url: cfg.webappUrl } } });
 }
 
