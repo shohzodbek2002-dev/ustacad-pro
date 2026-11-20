@@ -1524,7 +1524,7 @@ function disposeAll(){
  while(root.children.length){var c=root.children.pop();c.traverse(function(o){if(o.geometry)o.geometry.dispose();if(o.material&&o!==null&&o.material!==lineMat)o.material.dispose()})}
 }
 function rebuild(){
- try{ledBegin()}catch(e){}disposeAll();anim=[];S.mods.forEach(function(m){try{var gm=buildMod(m);applyPO(gm,m);try{ledApply(gm,m)}catch(e){}gm.rotation.y=(m.rot||0)*Math.PI/180;if(m.mir)gm.scale.x=-1;if(!m.hid)root.add(gm)}catch(e){toast('Modul chizishda xato ('+(m.name||m.type)+'): '+(e&&e.message||e));try{console.error(e)}catch(x){}}});
+ try{ledBegin()}catch(e){}disposeAll();anim=[];S.mods.forEach(function(m){try{var gm=buildMod(m);applyPO(gm,m);try{ledApply(gm,m)}catch(e){try{console.error(e);toast('LED xatosi: '+(e&&e.message))}catch(x){}}try{if(m.ledx)ledXRun(gm,m)}catch(e){try{console.error(e);toast('LED (bokovina/kryshka) xatosi: '+(e&&e.message))}catch(x){}}gm.rotation.y=(m.rot||0)*Math.PI/180;if(m.mir)gm.scale.x=-1;if(!m.hid)root.add(gm)}catch(e){toast('Modul chizishda xato ('+(m.name||m.type)+'): '+(e&&e.message||e));try{console.error(e)}catch(x){}}});
  if(dimG){scene.remove(dimG);dimG=null}
  if(helper){scene.remove(helper);helper=null}
  root.children.forEach(function(g){if(g.userData.id===S.sel){helper=new THREE.BoxHelper(g,0xff7a00);scene.add(helper);dimG=addDims(g,get(S.sel))}});
@@ -2071,7 +2071,7 @@ function props(){
  var L0=m.type==='burchak'?null:layout(m);
  if(L0&&L0.n>0){FS=Math.min(FS,L0.n-1);var fo2=(m.fx||{})[FS]||{},fl=[],kk;for(kk=1;kk<=L0.n;kk++)fl.push(kk);h+="<div class='g'><label>Fasadni tanlash<select data-fi='1'>"+opt(fl,FS+1)+"</select></label><label>Shu fasad materiali<select data-fm='1'>"+opt(['(modul bilan bir xil)'].concat(Object.keys(MATS)),fo2.mat||'(modul bilan bir xil)')+"</select></label><label>Shu fasad turi<select data-ft='1'>"+opt(['(modul bilan bir xil)','oddiy','ramkali','frezerovkali','oymali','shisha'],fo2.ft||'(modul bilan bir xil)')+"</select></label><label>Shu fasad oymasi<select data-fo='1'>"+opt(['(modul bilan bir xil)'].concat(OYL),fo2.oy||'(modul bilan bir xil)')+"</select></label><label>Shu fasad tutqichi<select data-fh='1'>"+opt(['(modul bilan bir xil)','chiziqli','tugma','push-to-open'],fo2.hd||'(modul bilan bir xil)')+"</select></label><label>Shu fasad burchak radiusi R (mm)<input data-fr1='1' type='number' min='0' max='200' step='1' placeholder='modul bilan bir xil' value='"+(fo2.fr!=null?fo2.fr:'')+"'></label></div><div class='row'><button id='bfo'>Shu fasadni ochish/yopish</button></div>"+oyEdHTML()}
  if(m.type==='custom')h+=cpHTML(m);var pn=[];partsRaw(m).forEach(function(p){if(pn.indexOf(p.name)<0)pn.push(p.name)});if(pn.indexOf(PS)<0)PS=pn[0];var po=(m.pm||{})[PS]||{};
- h+="<div class='g'><label>Detalni tanlash<select data-pn='1'>"+opt(pn,PS)+"</select></label><label>Shu detal materiali<select data-pm='1'>"+opt(['(modul bilan bir xil)'].concat(Object.keys(MATS)),po.mat||'(modul bilan bir xil)')+"</select></label></div><label style='display:flex;gap:8px;align-items:center'><input type='checkbox' data-pd='1' style='width:auto'"+(po.del?' checked':'')+"> Shu detalni olib tashlash</label>"+(function(){var ed=po.ed||['a','a','a','a'],sel=function(i,t){return "<label>"+t+"<select data-ed='"+i+"'>"+['a|Avto','0|Yo‘q','1|Kromka','2|Faz'].map(function(o){var q=o.split('|');return "<option value='"+q[0]+"'"+(String(ed[i])===q[0]?' selected':'')+">"+q[1]+"</option>"}).join('')+"</select></label>"};return "<div class='g'>"+sel(0,'Yuqori (L1)')+sel(1,'Past (L2)')+sel(2,'Chap (W1)')+sel(3,'O‘ng (W2)')+"<label>Faz o‘lchami (mm, 1–15)<input data-fzm='1' type='number' min='1' max='15' step='0.5' inputmode='decimal' value='"+(po.fzm||2)+"'></label></div><div class='xh'>LED yoritish (istalgan tomonga)</div><div class='g'>"+[['Yuqori (L1)'],['Past (L2)'],['Chap (W1)'],['O‘ng (W2)']].map(function(t,i){var lv=(po.led||[0,0,0,0])[i];return "<label>LED "+t[0]+"<select data-led='"+i+"'><option value='0'"+(lv?'':' selected')+">Yo‘q</option><option value='1'"+(lv?' selected':'')+">Bor</option></select></label>"}).join('')+"</div>"+lpHTML(po)+"<div class='row'><button data-lb='1'>Hamma tomon LED</button><button data-lb='0'>LED ni olib tashlash</button></div><div class='row'><button data-eb='1'>Hamma tomon kromka</button><button data-eb='2'>Hamma tomon faz</button><button data-eb='a'>Avtoga qaytarish</button></div>"})();
+ h+=lxHTML(m);h+="<div class='g'><label>Detalni tanlash<select data-pn='1'>"+opt(pn,PS)+"</select></label><label>Shu detal materiali<select data-pm='1'>"+opt(['(modul bilan bir xil)'].concat(Object.keys(MATS)),po.mat||'(modul bilan bir xil)')+"</select></label></div><label style='display:flex;gap:8px;align-items:center'><input type='checkbox' data-pd='1' style='width:auto'"+(po.del?' checked':'')+"> Shu detalni olib tashlash</label>"+(function(){var ed=po.ed||['a','a','a','a'],sel=function(i,t){return "<label>"+t+"<select data-ed='"+i+"'>"+['a|Avto','0|Yo‘q','1|Kromka','2|Faz'].map(function(o){var q=o.split('|');return "<option value='"+q[0]+"'"+(String(ed[i])===q[0]?' selected':'')+">"+q[1]+"</option>"}).join('')+"</select></label>"};return "<div class='g'>"+sel(0,'Yuqori (L1)')+sel(1,'Past (L2)')+sel(2,'Chap (W1)')+sel(3,'O‘ng (W2)')+"<label>Faz o‘lchami (mm, 1–15)<input data-fzm='1' type='number' min='1' max='15' step='0.5' inputmode='decimal' value='"+(po.fzm||2)+"'></label></div><div class='xh'>LED yoritish (istalgan tomonga)</div><div class='g'>"+[['Yuqori (L1)'],['Past (L2)'],['Chap (W1)'],['O‘ng (W2)']].map(function(t,i){var lv=(po.led||[0,0,0,0])[i];return "<label>LED "+t[0]+"<select data-led='"+i+"'><option value='0'"+(lv?'':' selected')+">Yo‘q</option><option value='1'"+(lv?' selected':'')+">Bor</option></select></label>"}).join('')+"</div>"+lpHTML(po)+"<div class='row'><button data-lb='1'>Hamma tomon LED</button><button data-lb='0'>LED ni olib tashlash</button></div><div class='row'><button data-eb='1'>Hamma tomon kromka</button><button data-eb='2'>Hamma tomon faz</button><button data-eb='a'>Avtoga qaytarish</button></div>"})();
  h+="<div class='row'><button id='br'>Aylantirish 90°</button><button class='pr' id='bo'>"+(m.open?"Yopish":"Ochish")+"</button><button id='bc'>Nusxalash</button><button id='bd'>O‘chirish</button></div><div class='row'><label style='flex:1'>Nusxa soni (1–50)<input id='cn' type='number' min='1' max='50' value='2'></label><button id='bm'>Ko‘paytirish</button></div>";
  el.innerHTML=h;if(m.type==='oval')el.querySelectorAll("[data-s='ftype'],[data-s='oy'],[data-s='mech'],[data-fr]").forEach(function(x){var l=x.closest('label');if(l)l.remove()});if(m.type==='oval'){var rw0=el.querySelector('.row');if(rw0){var dv=document.createElement('div');dv.className='g';dv.innerHTML="<label>Fasad o‘rami<select data-s='fz'>"+opt(['old+burchaklar','faqat old'],m.fz||'old+burchaklar')+"</select></label><label>Ustki qoplama<select data-s='ovtop'>"+opt(['oddiy','mramor','shisha','qopqoq'],m.ovtop||'oddiy')+"</select></label><label>Oyoq / sokol (balandligi = pol sathidan)<select data-s='lg'>"+opt(['yo‘q','bor','sokol'],m.lg||'yo‘q')+"</select></label><label>Qopqoq materiali<select data-s='capm'>"+opt(Object.keys(MATS),m.capm||'LDSP dub')+"</select></label><label>Tutqich rangi<select data-s='hcol'>"+opt(['kulrang','oltin'],m.hcol||'kulrang')+"</select></label><label>Eshik uslubi (R=rebrali, O=oyna, D=oddiy)<input data-ovp='1' type='text' maxlength='12' value='"+ovPatStr(m)+"'></label>";var pi=dv.querySelector('[data-ovp]');pi.onchange=function(){ovApplyPat(m,pi.value);commit();all()};rw0.parentNode.insertBefore(dv,rw0)}}
  if(m.type==='custom')cpBind(el,m);
@@ -2110,9 +2110,12 @@ function props(){
  var edw=function(fn){m.pm=m.pm||{};var o=m.pm[PS]=m.pm[PS]||{};fn(o);if(o.ed&&o.ed.every(function(v){return v==='a'}))delete o.ed;if(!Object.keys(o).length)delete m.pm[PS];commit();all()};
  el.querySelectorAll('[data-ed]').forEach(function(x){x.onchange=function(){edw(function(o){o.ed=o.ed||['a','a','a','a'];o.ed[+x.dataset.ed]=x.value==='a'?'a':+x.value})}});
  var fzs=el.querySelector('[data-fzm]');if(fzs)fzs.onchange=function(){var v=parseFloat(fzs.value);if(!(v>=1&&v<=15)){toast('Faz 1–15 mm oralig‘ida bo‘lishi kerak');fzs.value=po.fzm||2;return}edw(function(o){o.fzm=Math.round(v*2)/2})};
+ el.querySelectorAll('[data-lxb]').forEach(function(b){b.onclick=function(){if(b.dataset.lxb==='1'){m.ledx=Object.assign({d:80},m.ledx,{l:1,r:1,t:1})}else delete m.ledx;commit();all();toast(b.dataset.lxb==='1'?'Bokovina va kryshkaga LED qo‘shildi':'LED olib tashlandi')}});
+ el.querySelectorAll('[data-lx]').forEach(function(x){x.onchange=function(){m.ledx=m.ledx||{};var k=x.dataset.lx;if(k==='d'){var v=parseFloat(x.value);if(!(v>=20&&v<=400)){toast('Masofa 20–400 mm bo‘lishi kerak');x.value=m.ledx.d||80;return}m.ledx.d=v}else m.ledx[k]=+x.value;if(!(m.ledx.l||m.ledx.r||m.ledx.t))delete m.ledx;commit();all()}});
  el.querySelectorAll('[data-led]').forEach(function(x){x.onchange=function(){edw(function(o){o.led=o.led||[0,0,0,0];o.led[+x.dataset.led]=+x.value;if(!o.led.some(Boolean)){delete o.led;delete o.lp}});setTimeout(function(){ledWarn(m)},0)}});
+ el.querySelectorAll('[data-lpd]').forEach(function(x){x.onchange=function(){edw(function(o){o.lp=o.lp||{};o.lp.r=x.value==='1'?1:0})}});
  el.querySelectorAll('[data-lps]').forEach(function(x){x.onchange=function(){edw(function(o){o.lp=o.lp||{};o.lp.f=x.value==='ust'?'ust':'past'})}});
- el.querySelectorAll('[data-lp]').forEach(function(x){x.onchange=function(){var k=x.dataset.lp,v=parseFloat(x.value),R={d:[5,200],w:[6,40],h:[3,12],e:[5,200]}[k];if(!(v>=R[0]&&v<=R[1])){toast('Qiymat '+R[0]+' dan '+R[1]+' mm gacha bo‘lishi kerak');x.value=(po.lp&&po.lp[k])||({d:30,w:16,h:7,e:20})[k];return}edw(function(o){o.lp=o.lp||{};o.lp[k]=Math.round(v*2)/2});setTimeout(function(){ledWarn(m)},0)}});
+ el.querySelectorAll('[data-lp]').forEach(function(x){x.onchange=function(){var k=x.dataset.lp,v=parseFloat(x.value),R={d:[5,200],w:[6,40],h:[3,12],e:[5,200]}[k];if(!(v>=R[0]&&v<=R[1])){toast('Qiymat '+R[0]+' dan '+R[1]+' mm gacha bo‘lishi kerak');x.value=(po.lp&&po.lp[k])||({d:20,w:16,h:7,e:20})[k];return}edw(function(o){o.lp=o.lp||{};o.lp[k]=Math.round(v*2)/2});setTimeout(function(){ledWarn(m)},0)}});
  el.querySelectorAll('[data-lb]').forEach(function(b){b.onclick=function(){edw(function(o){if(b.dataset.lb==='1')o.led=[1,1,1,1];else{delete o.led;delete o.lp}})}});
  el.querySelectorAll('[data-eb]').forEach(function(b){b.onclick=function(){edw(function(o){var v=b.dataset.eb;o.ed=v==='a'?['a','a','a','a']:[+v,+v,+v,+v]})}});
  var pds=el.querySelector('[data-pd]');if(pds)pds.onchange=function(){m.pm=m.pm||{};m.pm[PS]=m.pm[PS]||{};if(pds.checked)m.pm[PS].del=true;else delete m.pm[PS].del;commit();all()};
@@ -2862,32 +2865,37 @@ $('#x_off').onclick=function(){
  dl('ustacad-taklif.pdf',d.output('blob'))
 };
 /* ---- Video, teshiklar CSV ---- */
-/* Foto-render: yumshoq soya (yorug‘lik manbasi siljitiladi), sub-piksel antialiasing, iliq yorug‘lik, ko‘z kabi kontrast va vinyetka */
-function photoGrade(x,W,H){var d=x.getImageData(0,0,W,H),p=d.data,lut=new Uint8Array(256),i,c,y,xx,k,q,v,cx=W/2,cy=H/2,m2=cx*cx+cy*cy,g;
+/* Foto-render: yumshoq soya (yorug‘lik manbasi siljitiladi), sub-piksel antialiasing, iliq yorug‘lik, ko‘z kabi kontrast va vinyetka. Bosqichma-bosqich — ilova qotmaydi */
+function photoGrade(x,W,H,done){var d=x.getImageData(0,0,W,H),p=d.data,lut=new Uint8Array(256),nz=new Float32Array(1024),i,c,y0=0,cx=W/2,cy=H/2,m2=cx*cx+cy*cy;
  for(i=0;i<256;i++){c=i/255;lut[i]=Math.round(255*(c*.68+c*c*(3-2*c)*.32))}
- for(y=0;y<H;y++){q=(y-cy)*(y-cy);for(xx=0;xx<W;xx++){k=(y*W+xx)*4;v=1-.26*((xx-cx)*(xx-cx)+q)/m2;g=(Math.random()-.5)*2.4;
-  p[k]=Math.max(0,Math.min(255,lut[p[k]]*v*1.015+g));p[k+1]=Math.max(0,Math.min(255,lut[p[k+1]]*v+g));p[k+2]=Math.max(0,Math.min(255,lut[p[k+2]]*v*.97+g))}}
- x.putImageData(d,0,0)}
-$('#x_rnd').onclick=function(){if(!need())return;toast('Foto-render tayyorlanmoqda… (bir necha soniya)');
- setTimeout(function(){var pr=renderer.getPixelRatio(),gv=grid.visible,hv=helper?helper.visible:null,fo=floor.material.opacity,sr=sun.shadow.radius,ms=sun.shadow.mapSize.x;
-  function rs(){renderer.setPixelRatio(pr);size();grid.visible=gv;if(helper&&hv!==null)helper.visible=hv;floor.material.opacity=fo;sun.shadow.radius=sr;if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null}sun.shadow.mapSize.set(ms,ms)}
-  try{var M=Math.min(4096,renderer.capabilities.maxTextureSize||2048);
-   var L=Math.min(3840,renderer.capabilities.maxTextureSize||2048),ar=(vp.clientWidth||1)/(vp.clientHeight||1),W=ar>=1?L:Math.round(L*ar),H=ar>=1?Math.round(L/ar):L;renderer.setPixelRatio(1);renderer.setSize(W,H,false);projFix();
-   grid.visible=false;if(helper)helper.visible=false;floor.material.opacity=.45;sun.shadow.radius=2;floor.material.opacity=.55;
-   if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null}sun.shadow.mapSize.set(M,M);
-   ctl.update();
-   var hemi=scene.children.filter(function(o){return o.isHemisphereLight})[0],sv={sp:sun.position.clone(),sc:sun.color.getHex(),si:sun.intensity,fc:fill.color.getHex(),fi:fill.intensity,hi:hemi?hemi.intensity:0,ex:renderer.toneMappingExposure},
-    ios=/iP(hone|ad|od)/.test(navigator.userAgent||''),N=ios?6:14,acc=document.createElement('canvas'),ax,i,an,rd;
-   acc.width=W;acc.height=H;ax=acc.getContext('2d');
+ for(i=0;i<1024;i++)nz[i]=(Math.random()-.5)*2.4;
+ function cl(v){return v<0?0:v>255?255:v}
+ (function chunk(){var y1=Math.min(H,y0+160),y,xx,k,q,v,g;
+  for(y=y0;y<y1;y++){q=(y-cy)*(y-cy);for(xx=0;xx<W;xx++){k=(y*W+xx)*4;v=1-.26*((xx-cx)*(xx-cx)+q)/m2;g=nz[(xx*7+y*13)&1023];
+   p[k]=cl(lut[p[k]]*v*1.015+g);p[k+1]=cl(lut[p[k+1]]*v+g);p[k+2]=cl(lut[p[k+2]]*v*.97+g)}}
+  y0=y1;if(y0<H)setTimeout(chunk,0);else{x.putImageData(d,0,0);done()}})()}
+var RND_BUSY=0;
+$('#x_rnd').onclick=function(){if(!need())return;if(RND_BUSY){toast('Render davom etmoqda…');return}RND_BUSY=1;toast('Foto-render tayyorlanmoqda…');
+ setTimeout(function(){var pr=renderer.getPixelRatio(),gv=grid.visible,hv=helper?helper.visible:null,fo=floor.material.opacity,sr=sun.shadow.radius,ms=sun.shadow.mapSize.x,
+  ios=/iP(hone|ad|od)/.test(navigator.userAgent||''),hemi=scene.children.filter(function(o){return o.isHemisphereLight})[0],
+  sv={sp:sun.position.clone(),sc:sun.color.getHex(),si:sun.intensity,fc:fill.color.getHex(),fi:fill.intensity,hi:hemi?hemi.intensity:0,ex:renderer.toneMappingExposure};
+  function rs(){try{cam.clearViewOffset()}catch(e){}sun.position.copy(sv.sp);sun.color.setHex(sv.sc);sun.intensity=sv.si;fill.color.setHex(sv.fc);fill.intensity=sv.fi;if(hemi)hemi.intensity=sv.hi;renderer.toneMappingExposure=sv.ex;
+   renderer.setPixelRatio(pr);size();grid.visible=gv;if(helper&&hv!==null)helper.visible=hv;floor.material.opacity=fo;sun.shadow.radius=sr;if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null}sun.shadow.mapSize.set(ms,ms);RND_BUSY=0}
+  try{var mx=renderer.capabilities.maxTextureSize||2048,M=ios?2048:Math.min(4096,mx),L=Math.min(ios?2560:3840,mx),ar=(vp.clientWidth||1)/(vp.clientHeight||1),W=ar>=1?L:Math.round(L*ar),H=ar>=1?Math.round(L/ar):L,
+    N=ios?4:8,i=0,acc=document.createElement('canvas'),ax;
+   acc.width=W;acc.height=H;ax=acc.getContext('2d');renderer.setPixelRatio(1);renderer.setSize(W,H,false);projFix();
+   grid.visible=false;if(helper)helper.visible=false;floor.material.opacity=.55;sun.shadow.radius=2;
+   if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null}sun.shadow.mapSize.set(M,M);ctl.update();
    sun.color.setHex(0xfff0dc);sun.intensity=1.15;fill.color.setHex(0xdfe9ff);fill.intensity=.35;if(hemi)hemi.intensity=.55;renderer.toneMappingExposure=1.1;
-   try{for(i=0;i<N;i++){an=i*2.39996;rd=Math.sqrt((i+.5)/N)*.9;
-     sun.position.set(sv.sp.x+Math.cos(an)*rd,sv.sp.y+Math.sin(an)*rd*.5,sv.sp.z+Math.sin(an)*rd);
-     cam.setViewOffset(W,H,Math.random()-.5,Math.random()-.5,W,H);
-     renderer.render(scene,cam);ax.globalAlpha=1/(i+1);ax.drawImage(renderer.domElement,0,0)}}
-   finally{cam.clearViewOffset();sun.position.copy(sv.sp);sun.color.setHex(sv.sc);sun.intensity=sv.si;fill.color.setHex(sv.fc);fill.intensity=sv.fi;if(hemi)hemi.intensity=sv.hi;renderer.toneMappingExposure=sv.ex}
-   ax.globalAlpha=1;photoGrade(ax,W,H);
-   acc.toBlob(function(b){if(b)dl('ustacad-foto-render.png',b);else toast('Render saqlanmadi')},'image/png');rs()}
+   (function pass(){var an,rd;
+    if(i>=N){try{cam.clearViewOffset()}catch(e){}toast('Rang va soya yakunlanmoqda…');ax.globalAlpha=1;
+     photoGrade(ax,W,H,function(){acc.toBlob(function(b){rs();if(b)dl('ustacad-foto-render.png',b);else toast('Render saqlanmadi')},'image/png')});return}
+    try{an=i*2.39996;rd=Math.sqrt((i+.5)/N)*.9;sun.position.set(sv.sp.x+Math.cos(an)*rd,sv.sp.y+Math.sin(an)*rd*.5,sv.sp.z+Math.sin(an)*rd);
+     cam.setViewOffset(W,H,Math.random()-.5,Math.random()-.5,W,H);renderer.render(scene,cam);cam.clearViewOffset();ax.globalAlpha=1/(i+1);ax.drawImage(renderer.domElement,0,0);i++}
+    catch(e){try{rs()}catch(e2){}toast('Render xatosi');return}
+    toast('Render: '+i+' / '+N);setTimeout(pass,40)})()}
   catch(e){try{rs()}catch(e2){}toast('Render xatosi')}},60)};
+
 $('#x_vid').onclick=function(){
  if(!window.MediaRecorder||!renderer.domElement.captureStream){toast('Bu brauzerda video yozish qo‘llab-quvvatlanmaydi');return}if(!need())return;if(SPIN){toast('Video yozilmoqda');return}
  var st=renderer.domElement.captureStream(30),ch=[],mr;
@@ -3764,7 +3772,7 @@ var prP=S.set.pr=S.set.pr||{};prP.h=prP.h||{};prP.mach=prP.mach||{};prP.cur=prP.
 var prST={conn:false,res:null},pr3=null,prFit=true,prQ=function(s){return document.querySelector(s)};
 function prE(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function prM(k){var kk=k||prP.cur,b=PRC.MACH0[kk]||PRC.MACH0.gen,r=Object.assign({},b,prP.mach[kk]||{});r.locked=b.locked===true;r.why=b.why;r.hpost=b.hpost===true;r.ext=b.ext;return r}
-function prList(){var r=[];S.mods.forEach(function(m){if(m.type==='oval')return;parts(m).forEach(function(p){r.push({key:m.id+'|'+p.name,m:m,p:p,name:m.name+' — '+p.name})})});return r}
+function prList(){var r=[];S.mods.forEach(function(m){parts(m).forEach(function(p){r.push({key:m.id+'|'+p.name,m:m,p:p,name:m.name+' — '+p.name})})});return r}
 function prCur(){var l=prList(),f=l.filter(function(x){return x.key===prP.sel})[0]||l[0];if(f)prP.sel=f.key;return f||null}
 function prHs(c){return c?(prP.h[c.key]=prP.h[c.key]||[]):[]}
 function prPart(c){return{name:c.name,L:c.p.L,W:c.p.W,T:c.p.T||c.m.t||18,lg:c.p.lg}}
@@ -3781,7 +3789,7 @@ function prTpl(id,x,y,p){var V=function(d,z,xx,yy){return{f:'V',x:xx==null?x:xx,
  case'pk':return[V(5,13)]}return[]}
 var PRT=[['kf','Konfirmat — yuza (Ø7 o‘tuvchi)'],['ke','Konfirmat — uch (Ø5×50, gor.)'],['mk','Minifix — kosa (Ø15×12.5)'],['mb','Minifix — boltcha uchi (Ø8×34, gor.)'],['rk','Rafix — kosa (Ø20×12.5)'],['rp','Rafix — pin (Ø6×10, gor.)'],['bk','Blum — petlya kosasi (Ø35×13)'],['bp','Blum — planka (2×Ø5×13, 32 mm)'],['hk','Hettich — petlya kosasi (Ø35×12.5)'],['hp','Hettich — planka (2×Ø5×12, 32 mm)'],['pk','Polka tayanchi (Ø5×13)']];
 function prNear(H,i){var a=H[i],m=Infinity;H.forEach(function(b,j){if(j!==i&&b.f===a.f){var d=Math.hypot(a.x-b.x,a.y-b.y);if(d<m)m=d}});return isFinite(m)?m:null}
-function prImport(c){var p=prPart(c),H=[];holes(c.m,c.p.name,c.p.L,c.p.W).forEach(function(h){var hz=h[0]==='H_DRILL';H.push({f:hz?'H':'V',x:h[1],y:h[2],d:h[3],z:hz?50:(h[3]===35?12.5:(h[3]===7?p.T:13)),th:!hz&&h[3]===7})});return H}
+function prImport(c){var p=prPart(c),H=[];if(c.m.type==='oval')return H;holes(c.m,c.p.name,c.p.L,c.p.W).forEach(function(h){var hz=h[0]==='H_DRILL';H.push({f:hz?'H':'V',x:h[1],y:h[2],d:h[3],z:hz?50:(h[3]===35?12.5:(h[3]===7?p.T:13)),th:!hz&&h[3]===7})});return H}
 function prFmt(v){return PRC.fin(v)?(Math.round(v*100)/100):'—'}
 function prGate(kind,mk){var c=prCur();if(!c){toast('Avval modul qo‘shing');return null}var M=prM(mk),H=prHs(c),p=prPart(c);
  if(M.locked&&(kind==='dxf'||kind==='csv'))M=prM('gen');
@@ -4055,12 +4063,12 @@ function dvCk(){try{if($('#ck_d').open)ckUI();if($('#dv_d').open&&!$('#dv_p').fi
 function ledGrooves(p,lp){
  if(!p||!p.led||!p.led.some(Boolean))return null;
  var T=p.T||18,q=lp||{},d=+q.d,w=+q.w,h=+q.h,EM=(+q.e>=5&&+q.e<=200)?+q.e:20,fc=q.f==='ust'?'ust':'past',MN=5,out=[],i,hz=/tokcha|^(tag|usti)$|taxta/i.test(p.name||''),wr='';
- if(!(d>0))d=30;if(!(w>0))w=16;if(!(h>0))h=7;
+ if(!(d>0))d=20;if(!(w>0))w=16;if(!(h>0))h=7;
  if(d<MN){d=MN;wr='kromkadan masofa 5 mm ga ko‘tarildi'}
  w=Math.max(6,Math.min(40,w));var hm=Math.min(12,T-4);if(h>hm){h=Math.max(0,hm);wr='chuqurlik '+h+' mm gacha cheklandi (eng ko‘pi 12 mm, qoldiq qalinlik ≥4 mm)'}
  for(i=0;i<4;i++){
   if(!p.led[i]){out.push(null);continue}
-  var A=i<2?p.W:p.L,B=i<2?p.L:p.W,g={i:i,d:d,w:w,h:h,mx:hz&&fc==='past',face:fc,err:'',warn:wr},a0=(i===0||i===2)?d:A-d-w,b0=EM,b1=B-EM;
+  var A=i<2?p.W:p.L,B=i<2?p.L:p.W,g={i:i,d:d,w:w,h:h,mx:hz&&fc==='past',face:fc,err:'',warn:wr},a0=(i===0||i===2)?d:A-d-w,ex=(i<2?(p.led[2]||p.led[3]):(p.led[0]||p.led[1]))?Math.max(EM,d+w+10):EM,b0=ex,b1=B-ex;
   if(h<3)g.err='detal juda yupqa, paz uchun joy yo‘q';
   else if(a0<MN-1e-6||a0+w>A-MN)g.err='paz detalga sig‘maydi: kromkadan masofa + profil eni juda katta';
   else if(b1-b0<30)g.err='detal juda qisqa: uchlaridan '+EM+' mm qoldirib paz sig‘maydi';
@@ -4073,7 +4081,9 @@ function ledMach(p,g){var x0=g.x0,x1=g.x1;if(g.mx){x0=p.L-g.x1;x1=p.L-g.x0}retur
 function ledLen(p){var s=0,i,g;for(i=0;i<4;i++){if(!p.led[i])continue;g=p.lg&&p.lg[i];s+=g&&!g.err?(i<2?g.x1-g.x0:g.y1-g.y0):(i<2?p.L:p.W)}return s}
 function ledWarn(m){try{parts(m).forEach(function(p){(p.lg||[]).forEach(function(g){if(g&&g.err)toast('LED paz: '+g.err);else if(g&&g.warn)toast('LED paz: '+g.warn)})})}catch(e){}}
 function lpHTML(po){var q=po.lp||{};if(!po.led||!po.led.some(Boolean))return'';var f=function(k,t,a,b,dv){return"<label>"+t+"<input type='number' data-lp='"+k+"' min='"+a+"' max='"+b+"' step='0.5' inputmode='decimal' value='"+(q[k]||dv)+"'></label>"};
- return"<div class='g' style='align-items:end'>"+f('d','Kromkadan masofa (mm)',5,200,30)+f('w','Profil eni (mm)',6,40,16)+f('h','Paz chuqurligi (mm)',3,12,7)+f('e','Uchlaridan masofa (mm)',5,200,20)+"<label style='grid-column:1/-1'>LED yuzasi<select data-lps='1'><option value='past'"+(q.f==='ust'?'':' selected')+">Pastki yuza — pastga yoritadi</option><option value='ust'"+(q.f==='ust'?' selected':'')+">Ustki yuza — tepaga yoritadi</option></select></label></div><div style='font-size:11px;color:var(--mt)'>Profil tokchaning pastki yuzasida, tanlangan tomon kromkasidan shu masofada o‘rnatiladi (kamida 5 mm). Paz uchlaridan ham masofa qoladi — kromkaga tegmaydi. Modul pastiga «Tag» detalida «Pastki», tepasiga «Usti» detalida «Ustki» yuzani tanlang.</div>"}
+ return"<div class='g' style='align-items:end'>"+f('d','Kromkadan masofa (mm)',5,200,20)+f('w','Profil eni (mm)',6,40,16)+f('h','Paz chuqurligi (mm)',3,12,7)+f('e','Uchlaridan masofa (mm)',5,200,20)+"<label style='grid-column:1/-1'>LED yuzasi<select data-lps='1'><option value='past'"+(q.f==='ust'?'':' selected')+">Pastki yuza — pastga yoritadi</option><option value='ust'"+(q.f==='ust'?' selected':'')+">Ustki yuza — tepaga yoritadi</option></select></label><label style='grid-column:1/-1'>Yorug‘lik yo‘nalishi<select data-lpd='1'><option value='0'"+(+q.r?'':' selected')+">Yuza tomonga (tashqariga)</option><option value='1'"+(+q.r?' selected':'')+">Teskari (ustki yuzada pastga)</option></select></label></div><div style='font-size:11px;color:var(--mt)'>Profil tokchaning pastki yuzasida, tanlangan tomon kromkasidan shu masofada o‘rnatiladi (kamida 5 mm). Paz uchlaridan ham masofa qoladi — kromkaga tegmaydi. Modul pastiga «Tag» detalida «Pastki», tepasiga «Usti» detalida «Ustki» yuzani tanlang.</div>"}
+function lxHTML(m){if(m.type==='burchak'||m.type==='custom')return'';var q=m.ledx||{},o=function(k,t){return"<label>"+t+"<select data-lx='"+k+"'><option value='0'"+(q[k]?'':' selected')+">Yo‘q</option><option value='1'"+(q[k]?' selected':'')+">Bor</option></select></label>"};
+ return"<div class='xh'>LED: bokovina va kryshka (modul bo‘yicha)</div><div class='g'>"+o('l','Chap bokovina (ichki)')+o('r','O‘ng bokovina (ichki)')+o('t','Tepa kryshka (ichki)')+"<label>Old chetdan masofa (mm)<input type='number' data-lx='d' min='20' max='400' step='5' inputmode='decimal' value='"+(q.d||80)+"'></label></div><div class='row'><button data-lxb='1'>Bokovina + kryshka: hammasiga LED</button><button data-lxb='0'>Olib tashlash</button></div>"}
 function ledAll(){var o=[],M=0;S.mods.forEach(function(m){if(m.hid)return;var seen={};parts(m).forEach(function(p){var l=p.led;if(!l||!l.some(Boolean))return;var m1=ledLen(p)/1000*p.q;M+=m1;o.push({m:m,p:p,len:m1})})});return{m:M,rows:o}}
 function ledM(){return ledAll().m}
 function ledCost(){var p=+(S.set.ledp||0);return p>0?ledM()*p:0}
@@ -4106,11 +4116,50 @@ function ledBegin(){
  LEDR=[];LEDK=0;LEDLN=0;LEDSHN=0;var tot=0;
  try{ledAll().rows.forEach(function(r){r.p.led.forEach(function(v){if(v)tot++})})}catch(x){}
  LEDMAXL=LED_MOB?5:10;LEDSTR=Math.max(1,Math.ceil(tot/LEDMAXL));var n=Math.max(1,Math.min(tot,LEDMAXL));LEDBASE=n<=3?1:Math.max(.38,Math.sqrt(3/n))}
+/* Modul: chap/o‘ng bokovina ichi va tepa kryshka ichi — profil pazga o‘rnatilgan, lenta ichkariga yoritadi */
+function ledX(g,m,add,getProf){var q=m.ledx;if(m.type==='burchak'||m.type==='custom'||!q||!(q.l||q.r||q.t))return;
+ var tw=(m.type==='oval'?Math.max(m.t||18,18):(m.t||18))/1000,tt=(m.t||18)/1000,W2=m.w/1000,H2=m.h/1000,D2=m.d/1000,dd=(q.d||80)/1000,wd=.016,hh=.007,mg=.02,pf=getProf();
+ [['l',-1,'Chap bokovina ichi'],['r',1,'O‘ng bokovina ichi'],['t',0,'Tepa kryshka ichi']].forEach(function(c){if(!q[c[0]])return;
+  var vert=c[0]!=='t',len=Math.max(.05,vert?H2-2*tw-2*mg:W2-2*tw-2*mg),cz=D2/2-dd-wd/2,sx=c[1],sp,pp,se,sq,lq,dw=Math.min(.01,wd-.004);
+  if(vert){sp=[hh+.0003,len,wd];pp=[sx*(W2/2-tw+hh/2-.00015),H2/2,cz];se=[.0006,len-.006,dw];sq=[sx*(W2/2-tw-.0006),H2/2,cz];lq=[sx*(W2/2-tw-.012),H2/2,cz]}
+  else{sp=[len,hh+.0003,wd];pp=[0,H2-tt+hh/2-.00015,cz];se=[len-.006,.0006,dw];sq=[0,H2-tt-.0006,cz];lq=[0,H2-tt-.012,cz]}
+  var pr=new THREE.Mesh(new THREE.BoxGeometry(sp[0],sp[1],sp[2]),pf);pr.position.set(pp[0],pp[1],pp[2]);pr.userData.led=1;
+  var lm=new THREE.MeshStandardMaterial({color:0xdcdad4,emissive:0x000000,emissiveIntensity:0,roughness:.45});lm.userData.ledm=1;
+  var st=new THREE.Mesh(new THREE.BoxGeometry(se[0],se[1],se[2]),lm);st.position.set(sq[0],sq[1],sq[2]);st.userData.led=1;add.push([g,pr]);add.push([g,st]);
+  var li=null,dist=Math.max(1,Math.min(2.2,.8+len*.6));
+  if(LEDK++%LEDSTR===0&&LEDLN<LEDMAXL){LEDLN++;li=new THREE.PointLight(0xffffff,0,dist,2);li.position.set(lq[0],lq[1],lq[2]);li.userData.led=1;add.push([g,li])}
+  LEDR.push({k:m.id+'|ledx|'+c[0],mat:lm,light:li,base:LEDBASE*Math.max(.7,Math.min(1.5,Math.sqrt(len/.6))),label:(m.name||'Modul')+' · '+c[2]})})}
+function ledXRun(g,m){var add=[],pf=null;ledX(g,m,add,function(){return pf||(pf=new THREE.MeshStandardMaterial({color:0xc4c8ce,metalness:.9,roughness:.32}))});add.forEach(function(a){a[0].add(a[1])});LEDR.forEach(function(e){if(!e.set){e.set=1;try{lSet(e)}catch(x){}}})}
+/* Panel geometriyasiga HAQIQIY paz (cho‘ntak) kesadi: R=[[u0,u1,v0,v1],...] (m, markazga nisbatan), h — chuqurlik (m) */
+function ledPocket(o,D,iL,iW,iT,fs,R,h){
+ var g=o.geometry,P=g.attributes&&g.attributes.position,N=g.attributes&&g.attributes.normal,U=g.attributes&&g.attributes.uv,I=g.index;
+ if(!P||!N||!U||!I||!g.groups||g.groups.length!==6||Array.isArray(o.material))return false;
+ var fi=iT*2+(fs>0?0:1),pos=[],nor=[],uv=[],i,j,k,L=D[iL],W=D[iW],pf=fs*D[iT]/2,pb=pf-fs*h;
+ g.groups.forEach(function(gr){if(gr.materialIndex===fi)return;for(i=gr.start;i<gr.start+gr.count;i++){k=I.getX(i);pos.push(P.getX(k),P.getY(k),P.getZ(k));nor.push(N.getX(k),N.getY(k),N.getZ(k));uv.push(U.getX(k),U.getY(k))}});
+ function pt(u,v,t){var a=[0,0,0];a[iL]=u;a[iW]=v;a[iT]=t;return a}
+ function Q(a,b,c,d,n){var e1=[b[0]-a[0],b[1]-a[1],b[2]-a[2]],e2=[c[0]-a[0],c[1]-a[1],c[2]-a[2]],x=e1[1]*e2[2]-e1[2]*e2[1],y=e1[2]*e2[0]-e1[0]*e2[2],z=e1[0]*e2[1]-e1[1]*e2[0],t;
+  if(x*n[0]+y*n[1]+z*n[2]<0){t=b;b=d;d=t}
+  [a,b,c,a,c,d].forEach(function(p){pos.push(p[0],p[1],p[2]);nor.push(n[0],n[1],n[2]);uv.push(p[iL]*1000/600+.5,p[iW]*1000/600+.5)})}
+ function uq(a){a.sort(function(x,y){return x-y});return a.filter(function(v,q){return q===0||v-a[q-1]>1e-9})}
+ var us=[-L/2,L/2],vs=[-W/2,W/2],ins=[],nf=[0,0,0],nu,nv;
+ R.forEach(function(r){us.push(r[0],r[1]);vs.push(r[2],r[3])});us=uq(us);vs=uq(vs);nu=us.length-1;nv=vs.length-1;nf[iT]=fs;
+ for(i=0;i<nu;i++){ins[i]=[];for(j=0;j<nv;j++){(function(cu,cv){ins[i][j]=R.some(function(r){return cu>r[0]&&cu<r[1]&&cv>r[2]&&cv<r[3]})})((us[i]+us[i+1])/2,(vs[j]+vs[j+1])/2)}}
+ function isIn(a,b){return a>=0&&b>=0&&a<nu&&b<nv&&ins[a][b]}
+ for(i=0;i<nu;i++)for(j=0;j<nv;j++){var tt=ins[i][j]?pb:pf;Q(pt(us[i],vs[j],tt),pt(us[i+1],vs[j],tt),pt(us[i+1],vs[j+1],tt),pt(us[i],vs[j+1],tt),nf);
+  if(!ins[i][j])continue;
+  [[-1,0],[1,0],[0,-1],[0,1]].forEach(function(dd){if(isIn(i+dd[0],j+dd[1]))return;var n=[0,0,0],c;
+   if(dd[0]){c=dd[0]<0?us[i]:us[i+1];n[iL]=-dd[0];Q(pt(c,vs[j],pf),pt(c,vs[j+1],pf),pt(c,vs[j+1],pb),pt(c,vs[j],pb),n)}
+   else{c=dd[1]<0?vs[j]:vs[j+1];n[iW]=-dd[1];Q(pt(us[i],c,pf),pt(us[i+1],c,pf),pt(us[i+1],c,pb),pt(us[i],c,pb),n)}})}
+ var ng=new THREE.BufferGeometry();ng.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));ng.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));ng.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+ ng.parameters=g.parameters;o.geometry=ng;try{g.dispose()}catch(e){}return true}
 function ledApply(g,m){if(!m.pm)return;
  var cen=null,cnt={},prof=null,add=[],PL=null;
- g.traverse(function(o){if(!o.isMesh||!o.userData.part||!o.geometry||!o.geometry.parameters)return;
-  var n=o.userData.part,ov=m.pm[n]||m.pm[n.replace(' (HDF)','')];if(!ov||!ov.led)return;
-  var gp=o.geometry.parameters,D=[gp.width,gp.height,gp.depth];if(!D.every(isFinite))return;
+ g.traverse(function(o){if(!o.isMesh||!o.userData.part||!o.geometry)return;
+  var n=o.userData.part,ov=m.pm&&(m.pm[n]||m.pm[n.replace(' (HDF)','')]);if(!ov||!ov.led)return;
+  var gp=o.geometry.parameters,D,cc=[0,0,0],gg=o.geometry,box=!!(gp&&gp.width&&gp.height&&gp.depth);
+  if(box)D=[gp.width,gp.height,gp.depth];
+  else{if(!gg.boundingBox)gg.computeBoundingBox();var bx=gg.boundingBox;if(!bx||bx.isEmpty())return;var sz=bx.getSize(new THREE.Vector3()),ct=bx.getCenter(new THREE.Vector3());D=[sz.x,sz.y,sz.z];cc=[ct.x,ct.y,ct.z]}
+  if(!D.every(isFinite))return;
   if(!PL){PL={};parts(m).forEach(function(q){if(!PL[q.name])PL[q.name]=q})}
   var pt=PL[n]||PL[n.replace(' (HDF)','')],iT=D.indexOf(Math.min(D[0],D[1],D[2])),ra=[0,1,2].filter(function(a){return a!==iT}),iL=ra[0],iW=ra[1];
   /* L/W o‘qlari detalning haqiqiy L va W o‘lchamiga bog‘lanadi (kromka tomonlari bilan bir xil) */
@@ -4118,24 +4167,30 @@ function ledApply(g,m){if(!m.pm)return;
   var L=D[iL],W=D[iW],T=D[iT];
   if(!cen){g.updateMatrixWorld(true);var bb=new THREE.Box3().setFromObject(g);cen=bb.isEmpty()?new THREE.Vector3():bb.getCenter(new THREE.Vector3())}
   cnt[n]=(cnt[n]||0)+1;var idx=cnt[n],lcn=o.worldToLocal(cen.clone()),dT=lcn.getComponent(iT)>=0?1:-1;
-  /* LED yuzasi: tanlangan pastki/ustki yuza (dunyo koordinatasida); vertikal detalda — modul ichiga qaragan yuza */
-  var mw=new THREE.Matrix4().copy(o.matrixWorld).invert();
-  var lg=(pt&&pt.lg)||ledGrooves({name:n,L:L*1000,W:W*1000,T:T*1000,led:ov.led.map(function(v){return v?1:0})},ov.lp);if(!lg)return;
+  /* X/Y paz koordinatalari panelning HAQIQIY 3D o‘lchamidan avtomatik hisoblanadi */
+  var lg=ledGrooves({name:n,L:L*1000,W:W*1000,T:T*1000,led:ov.led.map(function(v){return v?1:0})},ov.lp);if(!lg)return;
+  var fq=null,k;for(k=0;k<4;k++)if(ov.led[k]&&lg[k]&&!lg[k].err){fq=lg[k];break}if(!fq)return;
+  /* Yuza: ustki — dunyo +Y ga qaragan, pastki — dunyo −Y ga qaragan yuza. Vertikal panelda: pastki = ichki (modul markaziga), ustki = tashqi yuza */
+  var mw=new THREE.Matrix4().copy(o.matrixWorld).invert(),dc=new THREE.Vector3(0,fq.face==='ust'?1:-1,0).transformDirection(mw).getComponent(iT),
+   fs=Math.abs(dc)>.7?(dc>0?1:-1):(fq.face==='ust'?-dT:dT);
+  /* haqiqiy paz (cho‘ntak) geometriyasi */
+  var rects=[],dep=0;for(k=0;k<4;k++){var q=lg[k];if(ov.led[k]&&q&&!q.err){rects.push([(q.x0-L*500)/1000,(q.x1-L*500)/1000,(W*500-q.y1)/1000,(W*500-q.y0)/1000]);dep=q.h/1000}}
+  var real=box&&rects.length&&ledPocket(o,D,iL,iW,iT,fs,rects,dep);
   if(!prof)prof=new THREE.MeshStandardMaterial({color:0xc4c8ce,metalness:.9,roughness:.32});
   for(var i=0;i<4;i++){var gr=lg[i];if(!ov.led[i]||!gr||gr.err)continue;
-   var dc=new THREE.Vector3(0,gr.face==='ust'?1:-1,0).transformDirection(mw).getComponent(iT),fs=Math.abs(dc)>.7?(dc>0?1:-1):dT,la=i<2?iL:iW,wa=i<2?iW:iL,len=Math.max(.004,(i<2?gr.x1-gr.x0:gr.y1-gr.y0)/1000),wd=gr.w/1000,hh=gr.h/1000,
-    cL=((gr.x0+gr.x1)/2-L*500)/1000,cW=(W*500-(gr.y0+gr.y1)/2)/1000,key=m.id+'|'+n+'#'+idx+'|'+i;
-   /* alyumin profil: pazning ichida, yuza bilan teng (0,3 mm chiqib turadi) */
-   var sp=[0,0,0],pp=[0,0,0];sp[la]=len;sp[wa]=wd;sp[iT]=hh+.0003;pp[iL]=cL;pp[iW]=cW;pp[iT]=fs*(T/2-hh/2+.00015);
+   var la=i<2?iL:iW,wa=i<2?iW:iL,len=Math.max(.004,(i<2?gr.x1-gr.x0:gr.y1-gr.y0)/1000),wd=gr.w/1000,hh=gr.h/1000,
+    cL=((gr.x0+gr.x1)/2-L*500)/1000,cW=(W*500-(gr.y0+gr.y1)/2)/1000,key=m.id+'|'+n+'#'+idx+'|'+i,top=real?0:hh,cl=real?.0002:0;
+   /* alyumin profil: pazning ichida (yuza bilan teng) yoki paz kesilmagan egri detalda yuza ustida turadi */
+   var sp=[0,0,0],pp=[0,0,0];sp[la]=len-cl;sp[wa]=wd-cl;sp[iT]=hh;pp[iL]=cL+cc[iL];pp[iW]=cW+cc[iW];pp[iT]=cc[iT]+fs*(real?T/2-hh/2:T/2+hh/2);
    var pr=new THREE.Mesh(new THREE.BoxGeometry(sp[0],sp[1],sp[2]),prof);pr.position.set(pp[0],pp[1],pp[2]);pr.userData.led=1;
-   /* LED lenta diffuzori — profil eni ichida, pastga qaragan */
-   var se=[0,0,0],sq=[0,0,0];se[la]=Math.max(.004,len-.006);se[wa]=Math.max(.003,Math.min(.010,wd-.004));se[iT]=.0006;sq[iL]=cL;sq[iW]=cW;sq[iT]=fs*(T/2+.0006);
+   /* LED lenta diffuzori — profil eni ichida, yuzadan 0,6 mm chiqib turadi */
+   var se=[0,0,0],sq=[0,0,0];se[la]=Math.max(.004,len-.006);se[wa]=Math.max(.003,Math.min(.010,wd-.004));se[iT]=.0006;sq[iL]=cL+cc[iL];sq[iW]=cW+cc[iW];sq[iT]=cc[iT]+fs*(T/2+top+.0003);
    var lm=new THREE.MeshStandardMaterial({color:0xdcdad4,emissive:0x000000,emissiveIntensity:0,roughness:.45});lm.userData.ledm=1;
    var st=new THREE.Mesh(new THREE.BoxGeometry(se[0],se[1],se[2]),lm);st.position.set(sq[0],sq[1],sq[2]);st.userData.led=1;
    add.push([o,pr]);add.push([o,st]);
    var li=null,dist=Math.max(1,Math.min(2.2,.8+len*.6));
    if(LEDK++%LEDSTR===0&&LEDLN<LEDMAXL){LEDLN++;
-    li=new THREE.PointLight(0xffffff,0,dist,2);var lq=[0,0,0];lq[iL]=cL;lq[iW]=cW;lq[iT]=fs*(T/2+.012);li.position.set(lq[0],lq[1],lq[2]);li.userData.led=1;
+    li=new THREE.PointLight(0xffffff,0,dist,2);var lq=[0,0,0];lq[iL]=cL+cc[iL];lq[iW]=cW+cc[iW];lq[iT]=cc[iT]+fs*((ov.lp&&+ov.lp.r)?-1:1)*(T/2+top+.012);li.position.set(lq[0],lq[1],lq[2]);li.userData.led=1;
     if(lShadowOn()&&LEDSHN<2){LEDSHN++;li.castShadow=true;li.shadow.mapSize.set(512,512);li.shadow.camera.near=.01;li.shadow.camera.far=dist;li.shadow.bias=-.003;li.shadow.normalBias=.012}
     add.push([o,li])}
    LEDR.push({k:key,mat:lm,light:li,base:LEDBASE*Math.max(.7,Math.min(1.5,Math.sqrt(len/.6))),label:(m.name||m.type||'Modul')+' · '+n+(idx>1?' '+idx:'')+' · '+LED_SIDE[i]})}});
@@ -4409,9 +4464,7 @@ window.addEventListener('online',function(){say('Internet qayta ulandi')});
  document.addEventListener('focusout',function(){clearTimeout(t);t=setTimeout(function(){if(isTxt(document.activeElement))return;if(b.classList.contains('kb')){b.classList.remove('kb');relayout();window.scrollTo(0,0)}},150)});
  /* panel qayta chizilganda fokus yo‘qolsa ham 3D oynasi qaytsin */
  function endKb(){clearTimeout(t);t=setTimeout(function(){if(isTxt(document.activeElement))return;if(b.classList.contains('kb')){b.classList.remove('kb');relayout();window.scrollTo(0,0)}},200)}
- document.addEventListener('change',function(e){var el=e.target;if(isTxt(el)&&el.closest('aside'))try{el.blur()}catch(x){}endKb()},true);
- document.addEventListener('pointerdown',function(e){var a=document.activeElement;if(b.classList.contains('kb')&&a&&isTxt(a)&&!isTxt(e.target)&&!(e.target.closest&&e.target.closest('select,label')))try{a.blur()}catch(x){}},true);
- new MutationObserver(function(){if(b.classList.contains('kb'))endKb()}).observe(document.getElementById('props')||document.body,{childList:true,subtree:true});
+ document.addEventListener('change',function(){endKb()},true);
 })();
 </script>
 
