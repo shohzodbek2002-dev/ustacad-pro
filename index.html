@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="uz"><head><meta charset="utf-8">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-192.png">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>UstaCAD 5.8 PRO — Mebel konstruktori</title>
 <meta name="theme-color" content="#b4682a"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="UstaCAD"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="description" content="Mebel modullarini 3D loyihalash, hisob-kitob, raskroy va eksport">
@@ -179,7 +180,7 @@ window.addEventListener('load',function(){
 <div style="overflow-x:auto;margin-top:8px"><table class="prt"><thead><tr><th></th><th>№</th><th>Yuza</th><th>X</th><th>Y</th><th>Ø</th><th>Chuq.</th><th>O‘t.</th><th>Qo‘shni mm</th><th>Chetgacha</th><th></th></tr></thead><tbody id="pr_tb"></tbody></table></div>
 <h4>Ko‘rinish</h4><div class="pr-v"><svg id="pr_svg" style="color:var(--tx)"></svg><div><canvas id="pr_cv" style="touch-action:none;max-width:100%;border:1px solid var(--bd);border-radius:8px"></canvas></div></div>
 <p class="pr-n">Gorizontal teshiklar DXF/CSV/PDF ga chiqadi; G-code va stanokka yuborish gorizontal shpindel postprocessori yo‘qligi uchun BLOKLANGAN. Biesse TAP o‘chirilgan (format tasdiqlanmagan).</p><div id="pr_res" class="pr-box">Hisoblash tugmasini bosing.</div>
-<div class="row pr-b"><button id="pr_calc" class="pr">1 Hisoblash</button><button id="pr_3d">2 3D da ko‘rish</button><button id="pr_dxf">3 DXF</button><button id="pr_gc">4 G-code</button><button id="pr_tap" title="O‘chirilgan: format tasdiqlanmagan">5 Biesse TAP ⛔</button><button id="pr_csv">6 CSV</button><button id="pr_save">7 Faylga saqlash</button><button id="pr_send">8 Stanokka yuborish</button><button id="pr_pdf">Chizma PDF</button><label class="pr-o">Yuklash<input id="pr_open" type="file" accept=".json" hidden></label></div>
+<div class="row pr-b"><button id="pr_calc" class="pr">1 Hisoblash</button><button id="pr_3d">2 3D da ko‘rish</button><button id="pr_dxf">3 DXF</button><button id="pr_gc">4 G-code</button><button id="pr_tap" title="O‘chirilgan: format tasdiqlanmagan">5 Biesse TAP ⛔</button><button id="pr_csv">6 CSV</button><button id="pr_all" title="Barcha detallar: har biriga DXF + umumiy CSV jadval (ZIP)">Barcha detallar (ZIP)</button><button id="pr_save">7 Faylga saqlash</button><button id="pr_send">8 Stanokka yuborish</button><button id="pr_pdf">Chizma PDF</button><label class="pr-o">Yuklash<input id="pr_open" type="file" accept=".json" hidden></label></div>
 <div id="pr_sp" hidden class="pr-box"><div class="g"><label>Usul<select id="pr_sm"><option value="usb">USB orqali (fayl saqlash)</option><option value="pc">Kompyuter orqali (fayl)</option><option value="net">Tarmoq (CNC server/API)</option></select></label></div>
 <div id="pr_nw" hidden><label>Server manzili<input id="pr_url" placeholder="http://192.168.1.50:8080/upload"></label><button id="pr_ping">Ulanishni tekshirish</button></div>
 <button id="pr_sgo" class="pr">Yuborish</button><p id="pr_ss" class="pr-n">Brauzer stanokka bevosita ulanmaydi: “yuborildi” faqat server HTTP 2xx qaytarsa ko‘rsatiladi.</p></div>
@@ -248,7 +249,8 @@ window.addEventListener('load',function(){
 <button id="sh_go">Havola yaratish</button><p style="font-size:12px;color:var(--mt)">Mijoz login qilmaydi: havolani ochib modelni aylantiradi, yaqinlashtiradi va o‘lchamlarni ko‘radi. Narx va kesim ma’lumotlari yuborilmaydi.</p><div id="sh_l"></div></details>
 <details><summary>Mijozga taklif (PDF)</summary><div class="g"><label>Firma nomi<input id="of_f" type="text" maxlength="40"></label><label>Mijoz ismi<input id="of_c" type="text" maxlength="40"></label><label>Telefon<input id="of_p" type="text" maxlength="24"></label><label>Amal qilish (kun)<input id="of_v" type="number" min="0" max="365"></label></div><p style="margin:8px 0 2px;font-weight:600;font-size:12px;color:var(--mt)">Variantlar (ixtiyoriy: arzon / o‘rta / premium)</p><label>Qo‘shimcha shartlar (PDF oxirida chiqadi)<textarea id="of_n" rows="3" maxlength="400" style="width:100%"></textarea></label><div id="of_vr"></div><div class="row"><label style="flex:1">Logotip<input id="of_lg" type="file" accept="image/*"></label><button id="of_lx" style="align-self:end">Logotipni olib tashlash</button></div><button id="of_go" class="pr" style="margin-top:8px">Taklifni PDF qilish</button><p style="font-size:12px;color:var(--mt)">Faqat mijozga narx chiqadi: tannarx va foyda ko‘rsatilmaydi. Matnni lotin harflarida yozing.</p></details>
 <details><summary>Loyiha shablonlari</summary><div class="g"><label>Shablon nomi<input id="pj_n" type="text" maxlength="30"></label><button id="pj_s" style="align-self:end">Joriy loyihani saqlash</button></div><div id="pj_l"></div></details>
-<details><summary>Avtomatik zaxira</summary><div style="display:grid;gap:6px;margin:8px 0"><label style="display:flex;gap:8px;align-items:center"><input id="ab_on" type="checkbox" style="width:auto"> Har 24 soatda JSON zaxirani yuklab olish</label><p style="font-size:12px;color:var(--mt)">Brauzer fayl yuklashga faqat ekranga tekkanda ruxsat beradi, shuning uchun zaxira muddati kelganda birinchi bosishda yuklanadi.</p></div></details><details><summary>Telegram (avtomatik yuborish)</summary><div style="display:grid;gap:8px;margin:8px 0"><div id="tg_info" style="font-size:13px"></div><label style="display:flex;gap:8px;align-items:center"><input id="tg_auto" type="checkbox" style="width:auto"> PDF saqlanganda avtomatik Telegramga yuborish</label><label style="display:flex;gap:8px;align-items:center"><input id="tg_oth" type="checkbox" style="width:auto"> Boshqa fayllarni ham yuborish (Excel, DXF, PNG, JSON...)</label><p style="font-size:12px;color:var(--mt);margin:4px 0">Bot tokeni brauzerda saqlanmaydi — u faqat serverda (TELEGRAM_BOT_TOKEN) turadi.</p><label>Qo‘shimcha chat ID (vergul bilan)<input id="tg_ex" type="text" placeholder="123456789, -1001234567890"></label><label>Server manzili (majburiy)<input id="tg_url" type="text" placeholder="https://sizning-server.uz/upload"></label><div class="row"><button id="tg_save" class="pr">Saqlash</button><button id="tg_test">Sinov yuborish</button></div><p style="font-size:12px;color:var(--mt);margin:0">Bot sizga yozishi uchun botda avval /start bosilgan bo‘lishi kerak. Token kodda ko‘rinadi — xavfsizroq usul: server manzili.</p></div></details><details open><summary>Eksport va import</summary><div class="g"><button id="x_pdf">PDF hujjat</button><button id="x_lbl">Detal yorliqlari (PDF)</button><button id="x_ov">Umumiy chizma (PDF)</button><button id="x_xlsx">Excel (.xlsx)</button><button id="x_csv">CSV jadval</button><button id="x_glb">3D model (GLB)</button><button id="x_png">Rasm (PNG)</button><button id="x_json">Loyiha (JSON)</button><button id="x_dxf">Raskroy (DXF)</button><button id="x_rskpdf">Raskroy (PDF)</button><button id="x_shop">Sex uchun Excel</button><button id="x_lab">Yorliqlar (PDF)</button><button id="x_off">Taklif (PDF)</button><button id="x_drl">Teshiklar CSV (CNC)</button><button id="x_pdp">Detal chizmalari (PDF)</button><button id="x_asm">Yig‘ish chizmalari (PDF)</button><button id="x_rnd">Foto-render 4K (real ko‘rinish)</button><button id="x_vid">Aylanma video</button><button id="x_imp">JSON import</button></div><input type="file" id="x_file" accept=".json,application/json" style="display:none"><p style="font-size:12px;color:var(--mt)">GLB faqat HTML fayl brauzerda ochilganda yuklanadi.</p></details>
+<details><summary>📱 Instagram (9:16 rasm va video)</summary><div class="g"><label>Sarlavha<input id="ig_t" type="text" maxlength="60"></label><label>Telefon<input id="ig_p" type="tel" maxlength="24"></label><label>Hudud / qo‘shimcha<input id="ig_r" type="text" maxlength="60"></label><label>Video davomiyligi<select id="ig_d"><option value="6">6 soniya</option><option value="8">8 soniya</option><option value="12">12 soniya</option></select></label></div><div class="row"><button id="ig_png" class="pr">Rasm (PNG)</button><button id="ig_vid" class="pr">Video yozish</button></div><p style="font-size:12px;color:var(--mt)">Format 9:16 (Reels/Stories/reklama). Yozish paytida 3D oynani ushlamang. iPhone/Safari odatda MP4, Chrome odatda WebM beradi; Instagram WebM ni qabul qilmasa, MP4 ga o‘giring.</p></details>
+<details><summary>Avtomatik zaxira</summary><div style="display:grid;gap:6px;margin:8px 0"><label style="display:flex;gap:8px;align-items:center"><input id="ab_on" type="checkbox" style="width:auto"> Har 24 soatda JSON zaxirani yuklab olish</label><p style="font-size:12px;color:var(--mt)">Brauzer fayl yuklashga faqat ekranga tekkanda ruxsat beradi, shuning uchun zaxira muddati kelganda birinchi bosishda yuklanadi.</p></div></details><details><summary>Telegram (avtomatik yuborish)</summary><div style="display:grid;gap:8px;margin:8px 0"><div id="tg_info" style="font-size:13px"></div><label style="display:flex;gap:8px;align-items:center"><input id="tg_auto" type="checkbox" style="width:auto"> PDF saqlanganda avtomatik Telegramga yuborish</label><label style="display:flex;gap:8px;align-items:center"><input id="tg_oth" type="checkbox" style="width:auto"> Boshqa fayllarni ham yuborish (Excel, DXF, PNG, JSON...)</label><p style="font-size:12px;color:var(--mt);margin:4px 0">Bot tokeni brauzerda saqlanmaydi — u faqat serverda (TELEGRAM_BOT_TOKEN) turadi.</p><label>Qo‘shimcha chat ID (vergul bilan)<input id="tg_ex" type="text" placeholder="123456789, -1001234567890"></label><label>Server manzili (majburiy)<input id="tg_url" type="text" placeholder="https://sizning-server.uz/upload"></label><div class="row"><button id="tg_save" class="pr">Saqlash</button><button id="tg_test">Sinov yuborish</button></div><p style="font-size:12px;color:var(--mt);margin:0">Bot sizga yozishi uchun botda avval /start bosilgan bo‘lishi kerak. Token kodda ko‘rinadi — xavfsizroq usul: server manzili.</p></div></details><details open><summary>Eksport va import</summary><div class="g"><button id="x_pdf">PDF hujjat</button><button id="x_lbl">Detal yorliqlari (PDF)</button><select id="et_sz" title="Etiketka o‘lchami"><option value="50x30">Etiketka 50×30 mm</option><option value="70x40" selected>Etiketka 70×40 mm</option><option value="100x50">Etiketka 100×50 mm</option><option value="100x70">Etiketka 100×70 mm</option></select><button id="x_et">Etiketka PDF (1 dona = 1 sahifa)</button><button id="x_ov">Umumiy chizma (PDF)</button><button id="x_xlsx">Excel (.xlsx)</button><button id="x_csv">CSV jadval</button><button id="x_glb">3D model (GLB)</button><button id="x_png">Rasm (PNG)</button><button id="x_json">Loyiha (JSON)</button><button id="x_dxf">Raskroy (DXF)</button><button id="x_rskpdf">Raskroy (PDF)</button><button id="x_shop">Sex uchun Excel</button><button id="x_lab">Yorliqlar (PDF)</button><button id="x_off">Taklif (PDF)</button><button id="x_drl">Teshiklar CSV (CNC)</button><button id="x_pdp">Detal chizmalari (PDF)</button><button id="x_asm">Yig‘ish chizmalari (PDF)</button><button id="x_rnd">Foto-render 4K (real ko‘rinish)</button><button id="x_vid">Aylanma video</button><button id="x_imp">JSON import</button></div><input type="file" id="x_file" accept=".json,application/json" style="display:none"><p style="font-size:12px;color:var(--mt)">GLB faqat HTML fayl brauzerda ochilganda yuklanadi.</p></details>
 </aside>
 </main>
 <div id="sbar"></div>
@@ -2906,6 +2908,49 @@ $('#x_vid').onclick=function(){
  ctl.enabled=false;SPIN=function(now){var k=Math.min((now-t0)/D,1),a=a0+k*Math.PI*2;cam.position.set(tg.x+r*Math.sin(a),tg.y+off.y,tg.z+r*Math.cos(a));cam.lookAt(tg);if(k>=1&&mr.state==='recording')mr.stop()};
  mr.start();toast('Video yozilmoqda (8 soniya)…')
 };
+/* ---- Instagram (9:16): rasm va aylanma video — sarlavha, hudud va telefon bilan ---- */
+(function(){
+ var ig=S.set.ig=S.set.ig||{},F={t:$('#ig_t'),p:$('#ig_p'),r:$('#ig_r'),d:$('#ig_d')},busy=false,FN='system-ui,-apple-system,Segoe UI,Roboto,sans-serif';
+ if(!F.t||!F.p||!F.r||!F.d)return;
+ F.t.value=ig.t!=null?ig.t:'Buyurtma asosida mebel';F.p.value=ig.p!=null?ig.p:'+998880901617';F.r.value=ig.r!=null?ig.r:'Xorazm va Qoraqalpog‘iston bo‘ylab';F.d.value=ig.d||'8';
+ ['t','p','r','d'].forEach(function(k){F[k].onchange=function(){ig[k]=F[k].value;save()}});
+ function bgCol(){try{var t=document.createElement('canvas');t.width=t.height=1;var x=t.getContext('2d');x.drawImage(renderer.domElement,2,2,1,1,0,0,1,1);var q=x.getImageData(0,0,1,1).data;return[q[0],q[1],q[2]]}catch(e){return[27,20,16]}}
+ function rr(x,a,b,w,h,r){x.beginPath();x.moveTo(a+r,b);x.arcTo(a+w,b,a+w,b+h,r);x.arcTo(a+w,b+h,a,b+h,r);x.arcTo(a,b+h,a,b,r);x.arcTo(a,b,a+w,b,r);x.closePath()}
+ function fitT(x,t,mx,sz,wt){var s=sz;do{x.font=wt+' '+s+'px '+FN;s-=2}while(s>16&&x.measureText(t).width>mx)}
+ function hide(){var a=[helper,dimG].filter(Boolean),v=a.map(function(o){return o.visible});a.forEach(function(o){o.visible=false});return function(){a.forEach(function(o,i){o.visible=v[i]})}}
+ function paint(x,W,H,bg){
+  var s=W/720,lum=.299*bg[0]+.587*bg[1]+.114*bg[2],fg=lum>150?'#1b1410':'#ffffff',src=renderer.domElement,sw=src.width,sh=src.height,
+   top=H*.17,ah=H*.63,t=F.t.value.trim(),r=F.r.value.trim(),p=F.p.value.trim();
+  x.fillStyle='rgb('+bg.join(',')+')';x.fillRect(0,0,W,H);
+  if(sw&&sh){var k=Math.min(W/sw,ah/sh),dw=sw*k,dh=sh*k;x.drawImage(src,(W-dw)/2,top+(ah-dh)/2,dw,dh)}
+  x.textAlign='center';x.textBaseline='middle';x.fillStyle=fg;
+  if(t){fitT(x,t,W*.9,54*s,'700');x.fillText(t,W/2,H*.075)}
+  if(r){x.globalAlpha=.78;fitT(x,r,W*.9,28*s,'400');x.fillText(r,W/2,H*.125);x.globalAlpha=1}
+  if(p){var ph=96*s,pw=W*.82;rr(x,(W-pw)/2,H*.88,pw,ph,ph/2);x.fillStyle='#b4682a';x.fill();x.fillStyle='#ffffff';fitT(x,p,pw-60*s,48*s,'700');x.fillText(p,W/2,H*.88+ph/2+2*s)}
+ }
+ $('#ig_png').onclick=function(){if(busy||SPIN){toast('Video yozilmoqda');return}if(!need())return;
+  var W=1080,H=1920,c=document.createElement('canvas');c.width=W;c.height=H;var undo=hide();
+  try{renderer.render(scene,cam);paint(c.getContext('2d'),W,H,bgCol())}finally{undo()}
+  c.toBlob(function(b){if(b)dl('ustacad-instagram.png',b);else toast('Rasm yaratilmadi')},'image/png')};
+ $('#ig_vid').onclick=function(){
+  if(busy||SPIN){toast('Video yozilmoqda');return}
+  if(!window.MediaRecorder){toast('Bu brauzerda video yozish qo‘llab-quvvatlanmaydi');return}
+  if(!need())return;
+  var W=720,H=1280,c=document.createElement('canvas');c.width=W;c.height=H;
+  if(!c.captureStream){toast('Bu brauzerda video yozish qo‘llab-quvvatlanmaydi');return}
+  var x=c.getContext('2d'),dur=(+F.d.value||8)*1000,mt='',ty=['video/mp4;codecs=avc1.42E01E','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'],i,ch=[],mr,raf;
+  for(i=0;i<ty.length;i++){try{if(MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(ty[i])){mt=ty[i];break}}catch(e){}}
+  renderer.render(scene,cam);var bg=bgCol();paint(x,W,H,bg);
+  try{mr=new MediaRecorder(c.captureStream(30),mt?{mimeType:mt,videoBitsPerSecond:6000000}:{})}catch(e){try{mr=new MediaRecorder(c.captureStream(30))}catch(e2){toast('Video yozib bo‘lmadi');return}}
+  var mime=(mr.mimeType||mt||'video/webm').split(';')[0],ext=/mp4/.test(mime)?'mp4':'webm',undo=hide(),t0=performance.now(),tg=ctl.target.clone(),off=cam.position.clone().sub(tg),a0=Math.atan2(off.x,off.z),r=Math.hypot(off.x,off.z);
+  busy=true;ctl.enabled=false;
+  mr.ondataavailable=function(e){if(e.data&&e.data.size)ch.push(e.data)};
+  mr.onstop=function(){cancelAnimationFrame(raf);SPIN=null;ctl.enabled=true;undo();busy=false;if(ch.length)dl('ustacad-instagram.'+ext,new Blob(ch,{type:mime}));else toast('Video yozib bo‘lmadi')};
+  SPIN=function(now){var k=Math.min((now-t0)/dur,1),a=a0+k*Math.PI*2;cam.position.set(tg.x+r*Math.sin(a),tg.y+off.y,tg.z+r*Math.cos(a));cam.lookAt(tg);if(k>=1&&mr.state==='recording')mr.stop()};
+  (function tick(){raf=requestAnimationFrame(tick);paint(x,W,H,bg)})();
+  mr.start();toast('Video yozilmoqda ('+(dur/1000)+' soniya)…')};
+})();
+
 $('#x_drl').onclick=function(){
  if(!need())return;var rows=[['Modul','Detal','Uzunlik (mm)','Eni (mm)','Qalinlik (mm)','Qatlam','X (uzunlik bo‘ylab)','Y (en bo‘ylab)','Diametr (mm)','Chuqurlik (mm)','Soni']];
  S.mods.forEach(function(m){parts(m).forEach(function(p){holes(m,p.name,p.L,p.W).forEach(function(h){var dp=h[0]==='H_DRILL'?50:h[3]===35?12.5:h[3]===7?'teshib':13;rows.push([m.name,p.name,p.L,p.W,p.T,h[0],Math.round(h[1]*10)/10,Math.round(h[2]*10)/10,h[3],dp,p.q])})})});
@@ -3060,6 +3105,30 @@ $('#x_lbl').onclick=function(){var J=window.jspdf&&jspdf.jsPDF;if(!J){toast('PDF
   try{var qr=qrcode(0,'L');qr.addData(T(m.name+'|'+p.name+'|'+p.L+'x'+p.W+'x'+p.T+'|'+k+'/'+p.q));qr.make();var qn=qr.getModuleCount(),qs=16/qn;d.setFillColor(0,0,0);for(var qr_=0;qr_<qn;qr_++)for(var qc=0;qc<qn;qc++)if(qr.isDark(qr_,qc))d.rect(x+W-23+qc*qs,y+10+qr_*qs,qs,qs,'F')}catch(e){}
   t(m.name,6,0,8);t(p.name,12,1,11);t(p.L+' x '+p.W+' x '+p.T+' mm',18,1,10);t(p.mt,23,0,8);t((p.e?'Kromka: '+p.e.toFixed(2)+' m   ':'')+k+'/'+p.q,28,0,8)}})});
  dl('detal-yorliqlari.pdf',d.output('blob'));toast(n+' ta yorliq tayyor')};
+/* ---- Etiketka (stiker/rulon printer): tanlangan o‘lcham, 1 dona = 1 sahifa, kromka chizmasi + QR ---- */
+$('#x_et').onclick=function(){var J=window.jspdf&&jspdf.jsPDF;if(!J){toast('PDF kutubxonasi yuklanmadi');return}if(!S.mods.length){toast('Avval modul qo‘shing');return}
+ var sz=($('#et_sz').value||'70x40').split('x'),W=+sz[0]||70,H=+sz[1]||40,T=function(x){return String(x).replace(/[‘’ʻʼ`]/g,"'").replace(/[^\x20-\x7E]/g,'')},
+  d=new J({unit:'mm',format:[Math.min(W,H),Math.max(W,H)],orientation:W>=H?'landscape':'portrait'}),n=0,k=Math.max(.7,H/40),x0=3.2,
+  fit=function(t,w,sz,b){d.setFont('helvetica',b?'bold':'normal');d.setFontSize(sz);t=T(t);while(t.length>1&&d.getTextWidth(t)>w)t=t.slice(0,-1);return t};
+ S.mods.forEach(function(m){parts(m).forEach(function(p){for(var i=1;i<=p.q;i++){
+  if(n>0)d.addPage([W,H],W>=H?'l':'p');n++;
+  var f=p.fl||[0,0,0,0],qs=Math.min(H-5,W*.34,26),qx=W-2.5-qs,tw=qx-x0-1.5,y=3+4.2*k;
+  d.setDrawColor(150);d.setLineWidth(.2);d.rect(.8,.8,W-1.6,H-1.6);
+  d.text(fit(p.name,tw,10*k,1),x0,y);
+  y+=4.3*k;d.text(fit(m.name,tw,7*k,0),x0,y);
+  y+=5.6*k;d.text(fit(p.L+' x '+p.W+' x '+p.T+' mm',tw,9.5*k,1),x0,y);
+  y+=4.2*k;d.text(fit(p.mt,tw,7*k,0),x0,y);
+  y+=4.6*k;d.text(fit(i+'/'+p.q,tw,8*k,1),x0,y);
+  /* kromka chizmasi: qalin chiziq = kromka yopishtiriladigan chet (uzun tomon gorizontal) */
+  var dw=14*k,dh=Math.max(3*k,Math.min(8*k,dw*(p.W/p.L||1))),dy=H-3-dh;
+  d.setLineWidth(.15);d.setDrawColor(190);d.rect(x0,dy,dw,dh);d.setDrawColor(0);d.setLineWidth(.9);
+  if(f[0]>0)d.line(x0,dy,x0+dw,dy);if(f[1]>0)d.line(x0,dy+dh,x0+dw,dy+dh);if(f[2]>0)d.line(x0,dy,x0,dy+dh);if(f[3]>0)d.line(x0+dw,dy,x0+dw,dy+dh);
+  if(W>=60){d.setLineWidth(.2);d.text(fit('Kromka: uzun '+(f[0]+f[1])+', qisqa '+(f[2]+f[3]),tw-dw-2,6.5*k,0),x0+dw+2,dy+dh/2+1)}
+  if(window.qrcode){try{var q=qrcode(0,'M');q.addData(T('USTACAD|'+m.name+'|'+p.name+'|'+p.L+'x'+p.W+'x'+p.T+'|'+i));q.make();var c=q.getModuleCount(),cs=qs/c,r,cc;d.setFillColor(0,0,0);for(r=0;r<c;r++)for(cc=0;cc<c;cc++)if(q.isDark(r,cc))d.rect(qx+cc*cs,2.5+r*cs,cs+.01,cs+.01,'F')}catch(e){}}
+ }})});
+ if(!n){toast('Detal topilmadi');return}
+ dl('ustacad-etiketka-'+W+'x'+H+'.pdf',d.output('blob'));toast(n+' ta etiketka tayyor ('+W+'×'+H+' mm)')};
+
 (function(){
  var M=[['Ctrl+Z / Ctrl+Y','Orqaga / Oldinga'],['Ctrl+D','Modulni nusxalash'],['H','Yashirish / ko‘rsatish'],['L','Qulflash / ochish'],['M','Aks ettirish (mirror)'],['R','90° burish'],['← → ↑ ↓','Surish (Shift: 100 mm)'],['Delete','Modulni o‘chirish'],['Ikki marta bosish','Daraxtda nomini o‘zgartirish'],['?','Shu oynani ochish']];
  function shut(){var h=$('#hm');if(h)h.remove()}
@@ -3858,6 +3927,29 @@ function prPDF(){var c=prCur(),J=window.jspdf&&jspdf.jsPDF;if(!c)return toast('M
  H.forEach(function(h,i){if(!PRC.fin(h.x+h.y+h.d))return;var X=ox+h.x*sc,Y=oy+(p.W-h.y)*sc;d.setDrawColor(h.f==='H'?200:30,h.f==='H'?30:90,h.f==='H'?30:200);d.circle(X,Y,Math.max(h.d*sc/2,.6));d.setFontSize(7);d.text(String(i+1),X+1.5,Y-1.5)});d.setDrawColor(0);
  var y=25,x=185;d.setFontSize(8);d.text('No  Yuza  X     Y     D   Chuq  Tur',x,y);H.slice(0,48).forEach(function(h,i){y+=4.2;d.text(T((i+1)+'   '+(h.f==='V'?'V':'G')+'   '+prFmt(h.x)+'  '+prFmt(h.y)+'  '+h.d+'  '+(h.th?p.T:prFmt(h.z))+'  '+(h.th?'otuvchi':'kor')),x,y)});
  d.setFontSize(7);d.text('Nol: detalning chap-past burchagi. Vertikal ko\'k, gorizontal qizil. Yuza: yuqori.',15,200);dl(prNm(c,'pdf'),d.output('blob'))}
+function prCrc(u){var t=prCrc.t;if(!t){t=prCrc.t=[];for(var n=0;n<256;n++){var c=n;for(var k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}}var r=0xFFFFFFFF;for(var i=0;i<u.length;i++)r=t[(r^u[i])&255]^(r>>>8);return(r^0xFFFFFFFF)>>>0}
+/* Oddiy ZIP (siqmasdan), kutubxonasiz — oflayn ham ishlaydi */
+function prZip(files){var enc=new TextEncoder(),parts=[],cd=[],off=0,now=new Date(),dt=(((now.getFullYear()-1980)<<9)|((now.getMonth()+1)<<5)|now.getDate())&0xFFFF,tm=((now.getHours()<<11)|(now.getMinutes()<<5)|(now.getSeconds()>>1))&0xFFFF;
+ function u16(v){return[v&255,(v>>>8)&255]}function u32(v){return[v&255,(v>>>8)&255,(v>>>16)&255,(v>>>24)&255]}
+ files.forEach(function(f){var nm=enc.encode(f.name),d=enc.encode(f.text),crc=prCrc(d);
+  var lh=[].concat(u32(0x04034b50),u16(20),u16(0x0800),u16(0),u16(tm),u16(dt),u32(crc),u32(d.length),u32(d.length),u16(nm.length),u16(0));
+  parts.push(new Uint8Array(lh),nm,d);cd.push({nm:nm,crc:crc,len:d.length,off:off});off+=lh.length+nm.length+d.length});
+ var cds=0;cd.forEach(function(e){var h=[].concat(u32(0x02014b50),u16(20),u16(20),u16(0x0800),u16(0),u16(tm),u16(dt),u32(e.crc),u32(e.len),u32(e.len),u16(e.nm.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(e.off));parts.push(new Uint8Array(h),e.nm);cds+=h.length+e.nm.length});
+ parts.push(new Uint8Array([].concat(u32(0x06054b50),u16(0),u16(0),u16(cd.length),u16(cd.length),u32(cds),u32(off),u16(0))));
+ return new Blob(parts,{type:'application/zip'})}
+/* Barcha detallar uchun prisadka: har biriga DXF + bitta umumiy CSV (faqat tasdiqlangan formatlar) */
+function prAll(){var L=prList();if(!L.length)return toast('Modul yo‘q');var M=prM('gen'),files=[],bad=[],csvAll='',n=0,auto=0;
+ L.forEach(function(c){var own=prP.h[c.key],H=(own&&own.length)?own:prImport(c);if(!H.length)return;
+  var p=prPart(c),v=PRC.validate(p,H,M,'dxf');
+  if(v.er.length){bad.push(c.name+': '+v.er.join('; '));return}
+  if(!(own&&own.length))auto++;
+  n++;files.push({name:String(n).padStart(2,'0')+'-'+prNm(c,'dxf'),text:PRC.dxf(p,H)});
+  var t=PRC.csv(p,H);csvAll+=csvAll?t.replace(/^\ufeff[^\r\n]*\r\n/,'\r\n'):t});
+ if(!n){toast(bad.length?'Xato bor — fayl chiqarilmadi ('+bad.length+' ta)':'Teshikli detal topilmadi');return}
+ files.unshift({name:'00-jadval.csv',text:csvAll});
+ if(bad.length)files.push({name:'xatolar.txt',text:'Quyidagi detallar o‘tkazib yuborildi:\r\n'+bad.join('\r\n')});
+ dl('ustacad-prisadka-hammasi.zip',prZip(files),'application/zip');
+ toast(n+' ta detal'+(auto?' ('+auto+' tasi standart prisadka)':'')+(bad.length?', '+bad.length+' tasi xato bilan o‘tkazildi':''))}
 function prWire(){var $=prQ,c;
  $('#pr_part').onchange=function(){prP.sel=this.value;prFit=true;prST.res=null;prRows();prShow();save()};
  $('#pr_mach').onchange=function(){prP.cur=this.value;prST.res=null;prST.conn=false;prMach();prShow();save()};
@@ -3885,6 +3977,7 @@ $('#pr_tb').addEventListener('change',function(e){c=prCur();var i=e.target.datas
  $('#pr_tap').onclick=function(){prGate('tap','biesse')};
  $('#pr_csv').onclick=function(){var g=prGate('csv',prP.cur===undefined?'gen':(PRC.MACH0[prP.cur].locked?'gen':prP.cur));if(!g)return;prShow();dl(prNm(g.c,'csv'),PRC.csv(g.p,g.H),'text/csv')};
  $('#pr_pdf').onclick=prPDF;
+ $('#pr_all').onclick=prAll;
  $('#pr_save').onclick=function(){dl('ustacad-prisadka.json',JSON.stringify({ustacad:'5.8',prisadka:{h:prP.h,mach:prP.mach}},null,1),'application/json')};
  $('#pr_open').onchange=function(){var f=this.files[0],inp=this;if(!f)return;var r=new FileReader();r.onload=function(){try{var j=JSON.parse(r.result).prisadka;if(!j||!j.h)throw 0;Object.assign(prP.h,j.h);Object.assign(prP.mach,j.mach||{});prDirty();prUI();toast('Prisadka yuklandi')}catch(e){toast('Fayl noto‘g‘ri')}inp.value=''};r.readAsText(f)};
  $('#pr_send').onclick=function(){$('#pr_sp').hidden=!$('#pr_sp').hidden};
@@ -4468,4 +4561,9 @@ window.addEventListener('online',function(){say('Internet qayta ulandi')});
 })();
 </script>
 
+<script>
+/* Oflayn rejim (PWA): sw.js va manifest.webmanifest shu fayl bilan bir papkada bo‘lsa ishlaydi; bo‘lmasa jim o‘tadi */
+(function(){try{if(!('serviceWorker' in navigator)||!/^https?:$/.test(location.protocol))return;
+ window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}catch(e){}})();
+</script>
 </body></html>
