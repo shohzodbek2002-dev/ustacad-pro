@@ -1656,7 +1656,7 @@ function rebuild(){
 }
 function applyXray(){if(!XR)return;root.traverse(function(o){if(o.isMesh&&o.material&&!Array.isArray(o.material)){o.material.transparent=true;o.material.opacity=Math.min(o.material.opacity,.3);o.material.depthWrite=false}})}
 function applyExplode(){var k=XP/100*.6;root.children.forEach(function(g){var m=get(g.userData.id);if(!m)return;var cy=m.h/2000;g.children.forEach(function(o){if(!o.isMesh)return;if(!o.userData.p0)o.userData.p0=o.position.clone();var q=o.userData.p0;o.position.set(q.x*(1+k),cy+(q.y-cy)*(1+k),q.z*(1+k))})})}
-function floorMat(w,dz){if(S.set.fc){var c=document.createElement('canvas');c.width=c.height=128;var x=c.getContext('2d'),g=x.createLinearGradient(0,0,128,128);g.addColorStop(0,'#8b8d91');g.addColorStop(1,'#74777b');x.fillStyle=g;x.fillRect(0,0,128,128);x.strokeStyle='#a9acb0';x.lineWidth=3;x.strokeRect(0,0,128,128);var t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=window.__an||1;t.repeat.set(Math.max(1,w/.6),Math.max(1,dz/.6));var m=new THREE.MeshStandardMaterial({map:t,roughness:.22,metalness:.1,envMapIntensity:1.3});m.userData.wmClone=1;return m}return new THREE.MeshStandardMaterial({color:0xcfc6b8,roughness:.9})}
+function floorMat(w,dz){if(S.set.fcer||(S.set.fc&&!Array.isArray(S.set.fc))){var c=document.createElement('canvas');c.width=c.height=128;var x=c.getContext('2d'),g=x.createLinearGradient(0,0,128,128);g.addColorStop(0,'#8b8d91');g.addColorStop(1,'#74777b');x.fillStyle=g;x.fillRect(0,0,128,128);x.strokeStyle='#a9acb0';x.lineWidth=3;x.strokeRect(0,0,128,128);var t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=window.__an||1;t.repeat.set(Math.max(1,w/.6),Math.max(1,dz/.6));var m=new THREE.MeshStandardMaterial({map:t,roughness:.22,metalness:.1,envMapIntensity:1.3});m.userData.wmClone=1;return m}return new THREE.MeshStandardMaterial({color:0xcfc6b8,roughness:.9})}
 function wallMat(WC,w,H){var n=S.set.wmat;if(n&&MATS[n]!==undefined){try{var m=pbMat(n);if(m){['map','bumpMap','roughnessMap'].forEach(function(k){if(m[k]){m[k]=m[k].clone();m[k].needsUpdate=true;m[k].repeat.set(Math.max(1,w),Math.max(1,H))}});m.userData.wmClone=1;return m}}catch(e){}}return new THREE.MeshStandardMaterial({color:WC,roughness:.95})}
 function roomUp(b){if(roomG){roomG.traverse(function(o){var q=o.material;if(q&&q.userData&&q.userData.wmClone){['map','bumpMap','roughnessMap'].forEach(function(k){if(q[k])q[k].dispose()});q.dispose()}});scene.remove(roomG);roomG=null}if(!S.set.room||!S.mods.length)return;roomG=new THREE.Group();var H=(S.set.rh||3000)/1000,WC=new THREE.Color(S.set.wc||'#efe9df');
  var w=Math.max(b.max.x-b.min.x+2,4),cx=(b.max.x+b.min.x)/2,wl=new THREE.Mesh(new THREE.PlaneGeometry(w,H),wallMat(WC,w,H));
@@ -2886,11 +2886,11 @@ function furn(){var F={};function add(k,q){if(q>0)F[k]=(F[k]||0)+q}
  (S.set.xf||[]).forEach(function(x){add(x.n,x.q)});
  return F}
 function furnTotal(){var F=furn(),t=0,pf=S.price.fur||{};Object.keys(F).forEach(function(k){t+=F[k]*(pf[k]!=null?pf[k]:fcP(k))});return t}
-function fcF(k){return(S.set.fc||[]).filter(function(x){return x.n===k})[0]}
+function fcF(k){return(Array.isArray(S.set.fc)?S.set.fc:[]).filter(function(x){return x.n===k})[0]}
 function fcA(k){var f=fcF(k);return f&&f.a?' <small>['+esc(f.a)+']</small>':''}
 function fcP(k){var f=fcF(k);return f?(+f.p||0):0}
 function fp(k){var p=(S.price.fur||{})[k];return p!=null?p:fcP(k)}
-function fcUI(){var el=$('#fc');if(!el)return;var a=S.set.fc=S.set.fc||[];
+function fcUI(){var el=$('#fc');if(!el)return;if(!Array.isArray(S.set.fc)){if(S.set.fc)S.set.fcer=1;S.set.fc=[]}var a=S.set.fc;
  el.innerHTML='<div class="g"><label>Nomi<input id="fc_n" list="cat_dl" type="text" maxlength="40"></label><label>Artikul<input id="fc_a" type="text" maxlength="30"></label><label>Narx (so‘m/dona)<input id="fc_p" type="number" min="0" value="0"></label></div><div class="row"><button class="pr" id="fc_s">＋ Katalogga saqlash</button></div>'+(a.length?'':'<p style="font-size:12px;color:var(--mt)">Katalogdagi narx spetsifikatsiyada avtomatik qo‘llanadi. Qo‘lda kiritilgan narx ustun turadi.</p>');
  a.forEach(function(x,i){var r=document.createElement('div'),t=document.createElement('span'),d=document.createElement('button');r.className='row';r.style.alignItems='center';t.style.flex='1';t.textContent=x.n+(x.a?' ['+x.a+'] ':' ')+Math.round(x.p).toLocaleString('uz-UZ')+' so‘m';d.textContent='✕';d.onclick=function(){a.splice(i,1);save();fcUI();furnUI();calc()};r.appendChild(t);r.appendChild(d);el.appendChild(r)});
  $('#fc_s').onclick=function(){var n=$('#fc_n').value.trim(),p=parseFloat($('#fc_p').value),ar=$('#fc_a').value.trim();if(!n){toast('Furnitura nomini yozing');return}if(isNaN(p)||p<0){toast('Narx musbat son bo‘lishi kerak');return}var f=fcF(n);if(f){f.a=ar;f.p=p}else a.push({n:n,a:ar,p:p});save();fcUI();furnUI();calc();toast('Katalogga saqlandi: '+n)}}
@@ -4948,7 +4948,7 @@ if(aside&&!$('r3_d')){var d=document.createElement('details');d.id='r3_d';
  var ref=aside.querySelector('details');aside.insertBefore(d,ref?ref.nextSibling:null);
  d.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-m]');if(b){C().mode=b.dataset.m;P0.save();sync();R.post();P0.toast('Render: '+MODES[b.dataset.m].n)}});
  d.addEventListener('click',function(e){if(e.target.id!=='r3_preset')return;var st=S.set,c=C();if(!S.mods.length){P0.toast('Avval oshxona modullarini qo‘shing');return}
-  st.room=1;st.rc=1;st.wmat='';st.wc='#d9c9b4';st.cc='#2b2a28';st.fc=1;st.ct=st.ct||{};st.ct.on=true;st.ct.m='Marmar Karrara';
+  st.room=1;st.rc=1;st.wmat='';st.wc='#d9c9b4';st.cc='#2b2a28';st.fcer=1;st.ct=st.ct||{};st.ct.on=true;st.ct.m='Marmar Karrara';
   S.mods.forEach(function(m){m.hcol=/tortma/i.test((m.name||'')+' '+(m.type||'')+' '+(m.kind||''))?'xrom':'qora';m.body=m.y>=800?'MDF mat':'Tabiiy dub';m.front=m.y>=800?'MDF mat':'Tabiiy dub'});
   c.mode=ios?'standard':'pro';c.spot=c.under=c.led=c.ao=c.refl=c.hw=c.apron=1;P0.commit();P0.all();sync();var w=$('r3_wmat');if(w)w.value=st.wmat;P0.toast('Fotorealistik oshxona qo‘llandi (Orqaga bilan qaytarish mumkin)')});
  d.addEventListener('input',function(e){var id=e.target.id||'',k=id.replace('r3_',''),c=C();if(!id)return;
