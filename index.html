@@ -4896,7 +4896,7 @@ function details(m,M,cfg){
 function apron(cfg){
  if(!cfg.apron)return;var ok=function(m){return !m.hid&&!m.rot&&m.type!=='burchak'&&m.type!=='oval'},lo=S.mods.filter(function(m){return ok(m)&&m.y<800}),up=S.mods.filter(function(m){return ok(m)&&m.y>=800});if(!lo.length)return;
  var x0=1e9,x1=-1e9,z=1e9,top=0,ct=S.set.ct||{};lo.forEach(function(m){x0=Math.min(x0,m.x-m.w/2);x1=Math.max(x1,m.x+m.w/2);z=Math.min(z,(m.z||0)-m.d/2);top=Math.max(top,m.y+m.h)});
- top+=ct.on?(ct.t||38):0;var bot=up.length?Math.min.apply(null,up.map(function(m){return m.y})):top+600;if(bot-top<150)return;
+ top+=ct.on?(ct.t||38):0;var bot=up.length?Math.min.apply(null,up.map(function(m){return m.y})):top+600;if(bot-top<150||top>1300)return;
  var w=(x1-x0)/1000,h=(bot-top)/1000,mm=R.pbMat&&R.pbMat('Marmar Karrara');if(!mm)return;
  ['map','bumpMap','roughnessMap'].forEach(function(k){if(mm[k]){mm[k]=mm[k].clone();mm[k].needsUpdate=true;mm[k].repeat.set(Math.max(1,w),Math.max(1,h))}});mm.userData.r3c=1;
  var o=new T.Mesh(new T.PlaneGeometry(w,h),mm);o.position.set((x0+x1)/2000,(top+bot)/2000,z/1000+.004);o.receiveShadow=true;G.add(o)}
