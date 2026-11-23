@@ -2,7 +2,7 @@
    - CDN kutubxonalari (three.js, jsPDF, xlsx, qrcode) birinchi ochilishda keshlanadi va keyin internetsiz ishlaydi.
    - Ilovaning o‘zi (index.html va boshqa fayllar): avval internet, internet yo‘q/sekin bo‘lsa kesh.
    Yangilash: ilova fayllari o‘zgarmasa ham kerak bo‘lsa V ni oshiring. */
-var V='ustacad-v2';
+var V='ustacad-v3';
 var LIBS=[
  'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js',
  'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js',
