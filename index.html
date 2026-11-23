@@ -2007,6 +2007,37 @@ function sheetTbl(s){var P=s.ps.slice().sort(function(a,b){return a.no-b.no});re
 function remHTML(G){var c=S.cut,R=c.rem||[],ks=Object.keys(G),h="<details"+(R.length?" open":"")+"><summary style='font-size:13px;font-weight:600'>Qoldiq listlar ("+R.length+")</summary>";
  R.forEach(function(r,i){var o=ks.indexOf(r.k)<0?ks.concat([r.k]):ks;h+="<div class='row' style='align-items:end'><label style='flex:2 1 120px'>Material<select data-rm='k' data-i='"+i+"'>"+o.map(function(k){return"<option"+(k===r.k?" selected":"")+">"+esc(k)+"</option>"}).join("")+"</select></label><label style='flex:1 1 60px'>En<input type='number' data-rm='w' data-i='"+i+"' value='"+r.w+"'></label><label style='flex:1 1 60px'>Bo‘y<input type='number' data-rm='h' data-i='"+i+"' value='"+r.h+"'></label><label style='flex:1 1 60px'>Ombor<br><input type='checkbox' data-rm='f' data-i='"+i+"'"+(r.f?" checked":"")+" style='width:auto'></label><button data-rx='"+i+"' title='O‘chirish'>✕</button></div>"});
  return h+"<button data-ra='1' style='margin-top:6px'>+ Qoldiq qo‘shish</button><p style='font-size:12px;color:var(--mt)'>Omborda bor kichik listlar avval ishlatiladi va narxga kirmaydi.</p></details>"}
+/* ---- Raskroyni qo‘lda tahrirlash (6.0): detalni ko‘chirish / aylantirish / boshqa listga ---- */
+function partIds(sheets){var cnt={};sheets.forEach(function(s){s.ps.slice().sort(function(a,b){return a.y-b.y||a.x-b.x}).forEach(function(p){var b=p.mid+'|'+p.n;cnt[b]=(cnt[b]||0)+1;p.pid=b+'|'+cnt[b]})})}
+function applyMan(k,sheets,c){partIds(sheets);var M=(c.man||{})[k];if(!M)return;
+ Object.keys(M).forEach(function(pid){var e=M[pid],src=null,si=-1;sheets.forEach(function(s,i){s.ps.forEach(function(p){if(p.pid===pid){src=p;si=i}})});if(!src)return;
+  var dst=sheets[e.s]||sheets[si];if(e.r){var t=src.w;src.w=src.h;src.h=t;src.r=!src.r}src.x=e.x;src.y=e.y;
+  if(dst!==sheets[si]){sheets[si].ps.splice(sheets[si].ps.indexOf(src),1);dst.ps.push(src)}});
+ while(sheets.length>1&&!sheets[sheets.length-1].ps.length&&!sheets[sheets.length-1].rem)sheets.pop()}
+function manWarn(sheets,c){var w=[],K=+c.kerf||0;sheets.forEach(function(s,si){var W=s.rem?s.rem.w:c.sw,H=s.rem?s.rem.h:c.sh;s.ps.forEach(function(a,i){
+ if(a.x<0||a.y<0||a.x+a.w>W+.01||a.y+a.h>H+.01)w.push((si+1)+'-list №'+a.no+': list chegarasidan chiqib ketgan');
+ for(var j=i+1;j<s.ps.length;j++){var b=s.ps[j],ox=Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x),oy=Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y);
+  if(ox>.01&&oy>.01)w.push((si+1)+'-list: №'+a.no+' va №'+b.no+' ustma-ust');
+  else if((ox>.01&&oy>-K+.01&&oy<=.01)||(oy>.01&&ox>-K+.01&&ox<=.01))w.push((si+1)+'-list: №'+a.no+' va №'+b.no+' orasi arra qalinligidan (kerf '+K+' mm) kam')}})});return w}
+function manHTML(k,sheets,c){var M=(c.man||{})[k],n=M?Object.keys(M).length:0,ops='',so=sheets.map(function(s,i){return"<option value='"+i+"'>"+(i+1)+"-list</option>"}).join(''),wr=n?manWarn(sheets,c):[];
+ sheets.forEach(function(s,si){s.ps.slice().sort(function(a,b){return a.no-b.no}).forEach(function(p){ops+="<option value='"+si+"|"+p.pid+"' data-x='"+p.x+"' data-y='"+p.y+"'>"+(si+1)+"-list №"+p.no+" · "+esc(p.n)+" "+p.w+"×"+p.h+"</option>"})});
+ return"<details data-man='"+encodeURIComponent(k)+"'"+(c.mo===k?' open':'')+"><summary style='font-weight:700'>Qo‘lda tahrirlash"+(n?" ("+n+" ta o‘zgartirish)":"")+"</summary><div class='g'><label>Detal<select data-mp='1'>"+ops+"</select></label><label>Qaysi listga<select data-ms='1'>"+so+"</select></label><label>X (mm)<input data-mx='1' type='number' inputmode='decimal'></label><label>Y (mm)<input data-my='1' type='number' inputmode='decimal'></label></div><label style='display:flex;gap:8px;align-items:center'><input type='checkbox' data-mr='1' style='width:auto'> 90° aylantirish</label><div class='row'><button class='pr' data-mgo='1'>Qo‘llash</button><button data-mrs='1'>Hammasini tiklash</button></div><p style='font-size:12px;color:var(--mt)'>X/Y — detalning chap-yuqori burchagi, list chap-yuqori burchagidan (mm). Arra qalinligi (kerf) avtomatik qo‘shilmaydi. Tola yo‘nalishi qulfli detalni aylantirmang.</p>"+(wr.length?"<p style='color:#d33;font-size:12px'>"+wr.map(esc).join('<br>')+"</p>":"")+"</details>"}
+function manBind(el,c){el.querySelectorAll('[data-man]').forEach(function(d){var k=decodeURIComponent(d.dataset.man),sp=d.querySelector('[data-mp]'),ss=d.querySelector('[data-ms]'),ix=d.querySelector('[data-mx]'),iy=d.querySelector('[data-my]');
+ function fill(){var o=sp.selectedOptions[0];if(!o)return;ix.value=o.dataset.x;iy.value=o.dataset.y;ss.value=o.value.split('|')[0]}
+ sp.onchange=fill;fill();
+ d.querySelector('[data-mgo]').onclick=function(){var v=sp.value.split('|'),pid=v.slice(1).join('|'),x=parseFloat(ix.value),y=parseFloat(iy.value);if(!pid||!isFinite(x)||!isFinite(y)||x<0||y<0){toast('Noto‘g‘ri X/Y');return}
+  c.man=c.man||{};var M=c.man[k]=c.man[k]||{},pv=M[pid],rot=d.querySelector('[data-mr]').checked;M[pid]={s:+ss.value,x:x,y:y,r:rot?(pv&&pv.r?0:1):(pv&&pv.r?1:0)};c.mo=k;save();cutting()};
+ d.querySelector('[data-mrs]').onclick=function(){if(c.man)delete c.man[k];c.mo=k;save();cutting();toast('Qo‘lda tahrirlar bekor qilindi')}})}
+function dragBind(el,c){var dg=el.querySelector('[data-dg]');if(dg)dg.onchange=function(){c.drag=dg.checked;save();cutting()};if(!c.drag)return;
+ el.querySelectorAll('svg[data-dk]').forEach(function(sv){var k=decodeURIComponent(sv.dataset.dk),sn=+sv.dataset.sn,sheet=CUT[k]&&CUT[k][sn],st=null,K=+c.kerf||0;sv.style.touchAction='none';
+  sv.onpointerdown=function(e){var g=e.target.closest&&e.target.closest('g[data-pid]');if(!g||!sheet)return;var p=null;sheet.ps.forEach(function(q){if(q.pid===g.dataset.pid)p=q});if(!p)return;
+   st={g:g,p:p,x0:e.clientX,y0:e.clientY,sc:sv.viewBox.baseVal.width/sv.getBoundingClientRect().width,nx:p.x,ny:p.y};try{sv.setPointerCapture(e.pointerId)}catch(x){}g.setAttribute('opacity','.65');e.preventDefault()};
+  sv.onpointermove=function(e){if(!st)return;var p=st.p,W=sheet.rem?sheet.rem.w:c.sw,H=sheet.rem?sheet.rem.h:c.sh,x=p.x+(e.clientX-st.x0)*st.sc,y=p.y+(e.clientY-st.y0)*st.sc,T=Math.max(12,st.sc*8),cx=[0,W-p.w],cy=[0,H-p.h];
+   sheet.ps.forEach(function(q){if(q===p)return;cx.push(q.x+q.w+K,q.x-p.w-K,q.x,q.x+q.w-p.w);cy.push(q.y+q.h+K,q.y-p.h-K,q.y,q.y+q.h-p.h)});
+   var bx=null,by=null;cx.forEach(function(v){if(Math.abs(v-x)<T&&(bx===null||Math.abs(v-x)<Math.abs(bx-x)))bx=v});cy.forEach(function(v){if(Math.abs(v-y)<T&&(by===null||Math.abs(v-y)<Math.abs(by-y)))by=v});
+   if(bx!==null)x=bx;if(by!==null)y=by;x=Math.max(0,Math.min(W-p.w,x));y=Math.max(0,Math.min(H-p.h,y));st.nx=Math.round(x);st.ny=Math.round(y);st.g.setAttribute('transform','translate('+(st.nx-p.x)+','+(st.ny-p.y)+')')};
+  sv.onpointerup=sv.onpointercancel=function(e){if(!st)return;var d=st;st=null;if(Math.abs(d.nx-d.p.x)<2&&Math.abs(d.ny-d.p.y)<2){d.g.removeAttribute('transform');d.g.removeAttribute('opacity');return}
+   c.man=c.man||{};var M=c.man[k]=c.man[k]||{},pv=M[d.p.pid];M[d.p.pid]={s:sn,x:d.nx,y:d.ny,r:pv&&pv.r?1:0};c.mo=k;save();cutting()}})}
 function remBind(el){var c=S.cut;
  el.querySelectorAll('[data-rm]').forEach(function(i){i.onchange=function(){var r=c.rem[+i.dataset.i],k=i.dataset.rm;if(k==='f'){r.f=i.checked?1:0;save();cutting();return}if(k==='k')r.k=i.value;else{var v=parseFloat(i.value);if(isNaN(v)||v<50||v>6000){toast('Noto‘g‘ri qiymat');i.value=r[k];return}r[k]=v}save();cutting()}});
  el.querySelectorAll('[data-rx]').forEach(function(b){b.onclick=function(){c.rem.splice(+b.dataset.rx,1);save();cutting()}});
@@ -2071,7 +2102,7 @@ function cutting(){
  var c=S.cut,G={},out="";CUT={};
  S.mods.forEach(function(m){parts(m).forEach(function(p){if(p.k==="g")return;var k=p.mt+" · "+p.T+" mm";G[k]=G[k]||[];for(var i=0;i<p.q;i++)G[k].push({n:p.name,L:p.L,W:p.W,f:p.fl,fz:p.fz,fm:p.fzm,led:p.led,lg:p.lg,mid:m.id,gr:p.gr})})});
  out+="<div class='g'><label>List eni (mm)<input type='number' data-c='sw' value='"+c.sw+"'></label><label>List bo‘yi (mm)<input type='number' data-c='sh' value='"+c.sh+"'></label><label>Kerf (mm)<input type='number' data-c='kerf' value='"+c.kerf+"'></label><label>Teksturani aylantirish<br><input type='checkbox' data-c='rot' style='width:auto'"+(c.rot?" checked":"")+"> ruxsat</label><label>Chekka kesim (mm)<input type='number' data-c='trim' value='"+(c.trim||0)+"'></label><label>Kesish turi<select data-c='mode'><option value='e'"+(c.mode==='g'?"":" selected")+">Erkin (CNC)</option><option value='g'"+(c.mode==='g'?" selected":"")+">Gilyotin (panel pila)</option></select></label><label>Tejamkorlik<select data-c='q'><option value='tez'"+(c.q==='tez'?" selected":"")+">Tez</option><option value='optimal'"+(c.q==='tez'||c.q==='maksimal'?"":" selected")+">Optimal</option><option value='maksimal'"+(c.q==='maksimal'?" selected":"")+">Maksimal</option></select></label></div>";
- out+=remHTML(G);Object.keys(G).forEach(function(k){
+ out+="<label style='display:flex;gap:8px;align-items:center;margin:6px 0'><input type='checkbox' data-dg='1' style='width:auto'"+(c.drag?' checked':'')+"> Barmoq bilan siljitish (yoqilganda list ustida sahifa aylanmaydi)</label>"+remHTML(G);Object.keys(G).forEach(function(k){
   var bad=0,items=[];
   G[k].forEach(function(it){
    var w=it.L,h=it.W,r=false;
@@ -2087,14 +2118,14 @@ function cutting(){
    best.s.ps.push({x:best.sf.x,y:best.sf.y,w:it.w,h:it.h,r:it.r,f:it.f,fz:it.fz,fm:it.fm,led:it.led,lg:it.lg,n:it.n,mid:it.mid});best.sf.x+=it.w+c.kerf
   });return sheets}
   var sheets=nestBest(items,c,k);(((c.mode==='g'||c.trim||(c.rem||[]).some(function(r){return r.k===k}))&&sheets&&sheets.length)?[]:[function(a,b){return b.h-a.h||b.w-a.w},function(a,b){return b.w-a.w||b.h-a.h},function(a,b){return b.w*b.h-a.w*a.h}]).forEach(function(f){var r=pk(items.slice().sort(f));if(!sheets||r.length<sheets.length)sheets=r});
-  CUT[k]=sheets;var used=0;items.forEach(function(it){used+=it.w*it.h});
+  applyMan(k,sheets,c);CUT[k]=sheets;var used=0;items.forEach(function(it){used+=it.w*it.h});
   var ta=0;sheets.forEach(function(s){ta+=s.rem?s.rem.w*s.rem.h:c.sw*c.sh});var waste=ta?(1-used/ta)*100:0;
   out+="<p><b>"+k+"</b><br>Listlar soni: "+sheets.filter(function(s){return !s.rem}).length+(sheets.some(function(s){return s.rem})?" (+ "+sheets.filter(function(s){return s.rem}).length+" qoldiq)":"")+" · Chiqindi: "+waste.toFixed(1)+"% · Foydalanish: "+(100-waste).toFixed(1)+"%</p>"+edSum(items);
   if(bad)out+="<p style='color:#d33'>"+bad+" ta detal list o‘lchamiga sig‘madi.</p>";
   sheets.forEach(function(s,n){
-   s.ps.slice().sort(function(a,b){return a.y-b.y||a.x-b.x}).forEach(function(p,i){p.no=i+1});var v="<svg viewBox='0 0 "+(s.rem?s.rem.w:c.sw)+" "+(s.rem?s.rem.h:c.sh)+"' style='width:100%;background:var(--in);border:1px solid var(--bd);border-radius:6px;margin-bottom:6px'>";
+   s.ps.slice().sort(function(a,b){return a.y-b.y||a.x-b.x}).forEach(function(p,i){p.no=i+1});var v="<svg data-dk='"+encodeURIComponent(k)+"' data-sn='"+n+"' viewBox='0 0 "+(s.rem?s.rem.w:c.sw)+" "+(s.rem?s.rem.h:c.sh)+"' style='width:100%;background:var(--in);border:1px solid var(--bd);border-radius:6px;margin-bottom:6px'>";
    s.ps.forEach(function(p){
-    v+="<rect x='"+p.x+"' y='"+p.y+"' width='"+p.w+"' height='"+p.h+"' fill='#c59a62' fill-opacity='.55' stroke='#444' stroke-width='3'/>";
+    v+="<g data-pid='"+p.pid+"'>";v+="<rect x='"+p.x+"' y='"+p.y+"' width='"+p.w+"' height='"+p.h+"' fill='#c59a62' fill-opacity='.55' stroke='#444' stroke-width='3'/>";
     var f=p.f,top,bot,lf,rt;
     if(!p.r){top=f[0];bot=f[1];lf=f[2];rt=f[3]}else{lf=f[0];rt=f[1];top=f[2];bot=f[3]}
     var ln=function(x1,y1,x2,y2){return"<line x1='"+x1+"' y1='"+y1+"' x2='"+x2+"' y2='"+y2+"' stroke='#e0561e' stroke-width='9'/>"};
@@ -2106,13 +2137,13 @@ function cutting(){
     var lz=function(x1,y1,x2,y2){return "<line x1='"+x1+"' y1='"+y1+"' x2='"+x2+"' y2='"+y2+"' stroke='#f0b400' stroke-width='11' stroke-dasharray='4 12' stroke-linecap='round'/>"};
     (p.lg||[]).forEach(function(q){if(!q||q.err)return;var a=p.r?[q.y0,q.x0,q.y1,q.x1]:[q.x0,q.y0,q.x1,q.y1];v+="<rect x='"+(p.x+a[0])+"' y='"+(p.y+a[1])+"' width='"+(a[2]-a[0])+"' height='"+(a[3]-a[1])+"' fill='none' stroke='#f0b400' stroke-width='6' stroke-dasharray='4 10' stroke-linecap='round'/>"});
     if(zt)v+=zn(p.x,p.y+18,p.x+p.w,p.y+18);if(zb)v+=zn(p.x,p.y+p.h-18,p.x+p.w,p.y+p.h-18);if(zl)v+=zn(p.x+18,p.y,p.x+18,p.y+p.h);if(zr)v+=zn(p.x+p.w-18,p.y,p.x+p.w-18,p.y+p.h);
-    if(p.w>90&&p.h>60)v+="<text x='"+(p.x+16)+"' y='"+(p.y+34)+"' font-size='34' font-weight='700' fill='#e0561e'>"+p.no+"</text>";if(p.w>140&&p.h>70)v+="<text x='"+(p.x+p.w/2)+"' y='"+(p.y+p.h/2)+"' font-size='"+Math.min(55,p.h/3,p.w/7)+"' text-anchor='middle' dominant-baseline='middle' fill='currentColor'>"+p.w+"×"+p.h+"</text>"
+    if(p.w>90&&p.h>60)v+="<text x='"+(p.x+16)+"' y='"+(p.y+34)+"' font-size='34' font-weight='700' fill='#e0561e'>"+p.no+"</text>";if(p.w>140&&p.h>70)v+="<text x='"+(p.x+p.w/2)+"' y='"+(p.y+p.h/2)+"' font-size='"+Math.min(55,p.h/3,p.w/7)+"' text-anchor='middle' dominant-baseline='middle' fill='currentColor'>"+p.w+"×"+p.h+"</text>";v+="</g>"
    });
    out+="<small style='color:var(--mt)'>"+(n+1)+"-list · "+(function(){var u=0;s.ps.forEach(function(p){u+=p.w*p.h});return (100*u/(s.rem?s.rem.w*s.rem.h:c.sw*c.sh)).toFixed(0)})()+"% to‘lgan"+(s.rem?" (qoldiq "+s.rem.w+"×"+s.rem.h+")":"")+"</small>"+v+cutSvg(s)+"</svg>"+sheetTbl(s)+(n===sheets.length-1&&!s.rem?offBtn(s,k):"")
-  })
+  });out+=manHTML(k,sheets,c)
  });
  if(S.mods.length)out+="<p style='font-size:12px;color:var(--mt)'>To‘q sariq chiziq — kromka, ko‘k punktir — faz, sariq punktir to‘rtburchak — LED profil pazi (kromkadan masofada). Kerf har bir kesim oralig‘ida hisobga olingan.</p>";
- var el=$("#cut");el.innerHTML=out;remBind(el);try{asm()}catch(e){}el.querySelectorAll('[data-sv]').forEach(function(b){b.onclick=function(){c.rem=c.rem||[];c.rem.push({k:decodeURIComponent(b.dataset.sv),w:+b.dataset.w,h:+b.dataset.h,f:1});save();toast('Qoldiq omborga saqlandi');cutting()}});
+ var el=$("#cut");el.innerHTML=out;remBind(el);manBind(el,c);dragBind(el,c);try{asm()}catch(e){}el.querySelectorAll('[data-sv]').forEach(function(b){b.onclick=function(){c.rem=c.rem||[];c.rem.push({k:decodeURIComponent(b.dataset.sv),w:+b.dataset.w,h:+b.dataset.h,f:1});save();toast('Qoldiq omborga saqlandi');cutting()}});
  el.querySelectorAll("[data-c]").forEach(function(i){i.onchange=function(){
   var k=i.dataset.c;
   if(k==="rot")c.rot=i.checked;else if(k==="mode"||k==="q")c[k]=i.value;else if(k==="trim"){var tv=parseFloat(i.value);if(isNaN(tv)||tv<0||tv>50){toast("Noto‘g‘ri qiymat");i.value=c.trim||0;return}c.trim=tv}else{var v=parseFloat(i.value);if(isNaN(v)||v<(k==="kerf"?0:100)||v>(k==="kerf"?20:6000)){toast("Noto‘g‘ri qiymat");i.value=c[k];return}c[k]=v}
@@ -4485,6 +4516,18 @@ $('#ld_d').addEventListener('toggle',function(){if(this.open)ledUI()});
  ledSync()})();
 
 
+/* Kromka — barcha detallarga bir vaqtda (6.0) */
+(function(){var det=$('#pd');det=det&&det.closest('details');if(!det||$('#kb'))return;var nd=document.createElement('details');nd.id='kb';
+var E=[['k','O‘zgartirmaslik'],['a','Avto'],['0','Yo‘q'],['1','Kromka'],['2','Faz']].map(function(o){return"<option value='"+o[0]+"'>"+o[1]+"</option>"}).join('');
+nd.innerHTML="<summary>Kromka — barcha detallarga</summary><div class='g'><label>Qaysi modullar<select id='kb_t'><option value='all'>Barcha modullar</option><option value='sel'>Tanlangan modul</option></select></label><label>Qaysi detallar<select id='kb_p'></select></label>"+['Yuqori (L1)','Past (L2)','Chap (W1)','O‘ng (W2)'].map(function(t,i){return"<label>"+t+"<select data-kb='"+i+"'>"+E+"</select></label>"}).join('')+"<label>Faz o‘lchami (mm, 1–15)<input id='kb_z' type='number' min='1' max='15' step='.5' inputmode='decimal' placeholder='o‘zgartirmaslik'></label></div><div class='row'><button class='pr' id='kb_go'>Qo‘llash</button><button id='kb_rs'>Avtoga qaytarish</button></div><p style='font-size:12px;color:var(--mt)'>Tanlangan detallarning faqat «O‘zgartirmaslik» dan boshqa tanlangan chetlari o‘zgaradi. Bitta detalni alohida sozlash modul tahrirlagichida.</p>";
+det.parentNode.insertBefore(nd,det.nextSibling);
+function mods(){return $('#kb_t').value==='sel'?S.mods.filter(function(m){return m.id===S.sel}):S.mods}
+function fill(){var u={},cur=$('#kb_p').value;mods().forEach(function(m){parts(m).forEach(function(p){if(p.fl)u[p.name.replace(' (HDF)','')]=1})});var a=Object.keys(u);$('#kb_p').innerHTML="<option value=''>Barcha detallar</option>"+a.map(function(n){return"<option>"+esc(n)+"</option>"}).join('');if(a.indexOf(cur)>=0)$('#kb_p').value=cur}
+function go(reset){var f=$('#kb_p').value,z=parseFloat($('#kb_z').value),n=0,sl=[].map.call(nd.querySelectorAll('[data-kb]'),function(x){return x.value});
+ mods().forEach(function(m){parts(m).forEach(function(p){if(!p.fl)return;var nm=p.name.replace(' (HDF)','');if(f&&nm!==f)return;m.pm=m.pm||{};var o=m.pm[nm]=m.pm[nm]||{};
+  if(reset){delete o.ed;delete o.fzm;n++;return}var ed=(o.ed||['a','a','a','a']).slice(),ch=0;sl.forEach(function(v,i){if(v!=='k'){ed[i]=v==='a'?'a':+v;ch=1}});if(ch){o.ed=ed;n++}if(isFinite(z)&&z>=1&&z<=15){o.fzm=z;if(!ch)n++}})});
+ if(!n){toast('O‘zgartirish tanlanmagan yoki detal topilmadi');return}commit();all();toast(n+' ta detal yangilandi')}
+nd.addEventListener('toggle',function(){if(nd.open)fill()});$('#kb_t').onchange=fill;$('#kb_go').onclick=function(){go(0)};$('#kb_rs').onclick=function(){if(confirm('Tanlangan detallarning kromka/faz tahrirlari Avtoga qaytarilsinmi?'))go(1)}})();
 /* Foto-render o‘lchami tanlovi (6.0): 1080p yoki 4K */
 (function(){var b=$('#x_rnd');if(!b||$('#x_res'))return;var s=document.createElement('select');s.id='x_res';s.title='Foto-render o‘lchami (iPhone’da 4K — 2560 px bilan cheklangan)';s.style.cssText='width:auto;margin-left:6px';s.innerHTML='<option value="4k">4K (uzun tomon 3840)</option><option value="fhd">1080p (uzun tomon 1920)</option>';s.value=S.set.rres==='fhd'?'fhd':'4k';s.onchange=function(){S.set.rres=s.value;save()};b.parentNode.insertBefore(s,b.nextSibling)})();
 /* ===== CNC ENGINE (universal postprocessor) — alohida modul =====
