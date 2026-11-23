@@ -1678,7 +1678,9 @@ function fit(dir){
  if(S.mods.length){b.getCenter(c);b.getSize(s)}
  var dist=Math.max(s.x,s.y,s.z)*1.8+.9,v=dir||[1,.7,1.4];
  var vv=new THREE.Vector3(v[0],v[1],v[2]).normalize().multiplyScalar(dist);
- ctl.target.copy(c);cam.position.copy(c).add(vv);cam.lookAt(c);if(cam.isOrthographicCamera){oh=Math.tan(22.5*Math.PI/180)*dist;cam.zoom=1}projFix();ctl.update()
+ var p1=c.clone().add(vv),p0=cam.position.clone(),t0=ctl.target.clone(),tw=fit._tw=(fit._tw||0)+1,tm=performance.now();
+ if(!fit._d||cam.isOrthographicCamera||!(window.requestAnimationFrame)){fit._d=1;ctl.target.copy(c);cam.position.copy(p1);cam.lookAt(c);if(cam.isOrthographicCamera){oh=Math.tan(22.5*Math.PI/180)*dist;cam.zoom=1}projFix();ctl.update();return}
+ (function st(now){if(tw!==fit._tw)return;var k=Math.min(1,(now-tm)/450),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;cam.position.lerpVectors(p0,p1,e);ctl.target.lerpVectors(t0,c,e);cam.lookAt(ctl.target);projFix();ctl.update();if(k<1)requestAnimationFrame(st)})(tm)
 }
 var VIEWS=[["Perspektiv",[1,.7,1.4]],["Old",[0,0,1]],["Orqa",[0,0,-1]],["Chap",[-1,0,0]],["O‘ng",[1,0,0]],["Yuqori",[0,1,.001]],["Markazlash",null]];
 VIEWS.forEach(function(v){var b=document.createElement("button");b.textContent=v[0];b.onclick=function(){fit(v[1]||undefined)};$("#views").appendChild(b)});
@@ -3005,12 +3007,12 @@ $('#x_rnd').onclick=function(){if(!need())return;if(RND_BUSY){toast('Render davo
   sv={sp:sun.position.clone(),sc:sun.color.getHex(),si:sun.intensity,fc:fill.color.getHex(),fi:fill.intensity,hi:hemi?hemi.intensity:0,ex:renderer.toneMappingExposure};
   function rs(){try{cam.clearViewOffset()}catch(e){}sun.position.copy(sv.sp);sun.color.setHex(sv.sc);sun.intensity=sv.si;fill.color.setHex(sv.fc);fill.intensity=sv.fi;if(hemi)hemi.intensity=sv.hi;renderer.toneMappingExposure=sv.ex;
    renderer.setPixelRatio(pr);size();grid.visible=gv;if(helper&&hv!==null)helper.visible=hv;floor.material.opacity=fo;sun.shadow.radius=sr;if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null}sun.shadow.mapSize.set(ms,ms);RND_BUSY=0}
-  try{var mx=renderer.capabilities.maxTextureSize||2048,M=ios?2048:Math.min(4096,mx),L=Math.min(ios?2560:3840,mx),ar=(vp.clientWidth||1)/(vp.clientHeight||1),W=ar>=1?L:Math.round(L*ar),H=ar>=1?Math.round(L/ar):L,
+  try{var mx=renderer.capabilities.maxTextureSize||2048,M=ios?2048:Math.min(4096,mx),L=Math.min(S.set.rres==='fhd'?1920:(ios?2560:3840),mx),ar=(vp.clientWidth||1)/(vp.clientHeight||1),W=ar>=1?L:Math.round(L*ar),H=ar>=1?Math.round(L/ar):L,
     N=ios?4:8,i=0,acc=document.createElement('canvas'),ax;
    acc.width=W;acc.height=H;ax=acc.getContext('2d');renderer.setPixelRatio(1);renderer.setSize(W,H,false);projFix();
    grid.visible=false;if(helper)helper.visible=false;floor.material.opacity=.55;sun.shadow.radius=2;
    if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null}sun.shadow.mapSize.set(M,M);ctl.update();
-   sun.color.setHex(0xfff0dc);sun.intensity=1.15;fill.color.setHex(0xdfe9ff);fill.intensity=.35;if(hemi)hemi.intensity=.55;renderer.toneMappingExposure=1.1;
+   var nightR=!!(S.set.r3&&S.set.r3.night);sun.color.setHex(nightR?0x8da4ff:0xfff0dc);sun.intensity=nightR?.14:1.15;fill.color.setHex(nightR?0x5b6fb0:0xdfe9ff);fill.intensity=nightR?.05:.35;if(hemi)hemi.intensity=nightR?.1:.55;renderer.toneMappingExposure=nightR?.95:1.1;
    (function pass(){var an,rd;
     if(i>=N){try{cam.clearViewOffset()}catch(e){}toast('Rang va soya yakunlanmoqda…');ax.globalAlpha=1;
      photoGrade(ax,W,H,function(){acc.toBlob(function(b){rs();if(b)dl('ustacad-foto-render.png',b);else toast('Render saqlanmadi')},'image/png')});return}
@@ -4483,6 +4485,8 @@ $('#ld_d').addEventListener('toggle',function(){if(this.open)ledUI()});
  ledSync()})();
 
 
+/* Foto-render o‘lchami tanlovi (6.0): 1080p yoki 4K */
+(function(){var b=$('#x_rnd');if(!b||$('#x_res'))return;var s=document.createElement('select');s.id='x_res';s.title='Foto-render o‘lchami (iPhone’da 4K — 2560 px bilan cheklangan)';s.style.cssText='width:auto;margin-left:6px';s.innerHTML='<option value="4k">4K (uzun tomon 3840)</option><option value="fhd">1080p (uzun tomon 1920)</option>';s.value=S.set.rres==='fhd'?'fhd':'4k';s.onchange=function(){S.set.rres=s.value;save()};b.parentNode.insertBefore(s,b.nextSibling)})();
 /* ===== CNC ENGINE (universal postprocessor) — alohida modul =====
    Ish tartibi: Prisadka teshiklari → toolpath → stanok profili → postprocessor → fayl → qayta parser bilan tekshiruv.
    MUHIM: CIX/MPR shablonlari XOTIRADAN yozilgan va TASDIQLANMAGAN. Haqiqiy namuna fayl import qilinmaguncha va stanokda
@@ -4813,7 +4817,7 @@ function injectSz(){
 if(cutEl){new MutationObserver(function(){try{injectSz()}catch(e){}}).observe(cutEl,{childList:true});injectSz()}
 
 /* ============ 6. FPS, YENGIL GRAFIKA, OFFLAYN OGOHLANTIRISH ============ */
-var vp=$('vp'),chip=document.createElement('div'),lite=lsGet('ustonex_pro_lite',null),isPhone=/iPhone|iPod/.test(navigator.userAgent||'');
+var vp=$('vp'),chip=document.createElement('div'),lite=false,isPhone=/iPhone|iPod/.test(navigator.userAgent||'');
 if(vp){chip.id='pro_fps';chip.style.cssText='position:absolute;right:10px;bottom:10px;background:color-mix(in srgb,var(--pn) 90%,transparent);border:1px solid var(--bd);border-radius:8px;padding:3px 8px;font-size:11px;font-variant-numeric:tabular-nums;pointer-events:none;z-index:3';vp.appendChild(chip)}
 var btn=document.createElement('button');btn.id='pro_lite';btn.title='Yengil grafik: soyalar va aniqlik kamayadi, FPS oshadi';
 function paintBtn(){btn.textContent=lite?'Grafika: yengil':'Grafika: to‘liq';btn.style.borderColor=lite?'var(--ac)':'';btn.style.color=lite?'var(--ac)':''}
@@ -4823,8 +4827,8 @@ function applyLite(on){
   if(p.sun&&p.sun.shadow){p.sun.shadow.mapSize.set(on?1024:2048,on?1024:2048);if(p.sun.shadow.map){p.sun.shadow.map.dispose();p.sun.shadow.map=null}}
   p.size();return true}catch(e){return false}}
 btn.onclick=function(){lite=!lite;lsSet('ustonex_pro_lite',lite);applyLite(lite);paintBtn();say(lite?'Yengil grafika yoqildi':'To‘liq grafika yoqildi')};
-var vw=$('views');if(vw)vw.appendChild(btn);
-if(lite===null)lite=isPhone;paintBtn();
+/* Grafika tugmasi olib tashlandi: doim to‘liq grafika */
+lsSet('ustonex_pro_lite',false);paintBtn();
 setTimeout(function(){if(lite)applyLite(true)},600);
 var rmq=document.getElementById('rm_q');if(rmq)rmq.addEventListener('change',function(){setTimeout(function(){if(lite)applyLite(true)},50)});
 var fr=0,t0=performance.now(),low=0;
@@ -4849,7 +4853,7 @@ var MODES={light:{n:'LIGHT',pr:1,sm:0,sh:0,spots:0,env:1,ao:0,fx:0,det:0},
  standard:{n:'STANDARD',pr:1.25,sm:1024,sh:1,spots:4,env:1,ao:1,fx:0,det:1},
  pro:{n:'PRO',pr:1.75,sm:2048,sh:2,spots:10,env:1,ao:2,fx:1,det:2},
  ultra:{n:'ULTRA',pr:2,sm:4096,sh:2,spots:24,env:1,ao:3,fx:2,det:2}};
-var DEF={mode:null,spot:1,under:1,led:1,ledc:'#ffe2b0',spotI:1,ledI:1,ao:1,envI:1,refl:1,hw:1,autorot:0,rotS:1,apron:0};
+var DEF={mode:null,spot:1,under:1,led:1,ledc:'#ffe2b0',spotI:1,ledI:1,ao:1,envI:1,refl:1,hw:1,autorot:0,rotS:1,apron:0,night:0};
 function C(){var s=S.set.r3=S.set.r3||{},k;for(k in DEF)if(s[k]===undefined)s[k]=DEF[k];return s}
 var ios=/iPhone|iPod|Android/i.test(navigator.userAgent||'');
 var gl=ren.getContext(),maxTex=ren.capabilities.maxTextureSize||2048,lowGPU=maxTex<4096;
@@ -4862,7 +4866,7 @@ function bx(g,w,h,d,x,y,z,M,sh){var o=new T.Mesh(new T.BoxGeometry(w,h,d),M);o.p
 function cy(g,r,l,x,y,z,M,ax){var o=new T.Mesh(new T.CylinderGeometry(r,r,l,12),M);o.position.set(x,y,z);if(ax==='x')o.rotation.z=Math.PI/2;if(ax==='z')o.rotation.x=Math.PI/2;g.add(o);return o}
 function aoTexture(){if(aoTex)return aoTex;var c=document.createElement('canvas');c.width=c.height=64;var x=c.getContext('2d'),g=x.createRadialGradient(32,32,2,32,32,32);g.addColorStop(0,'rgba(0,0,0,.55)');g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=g;x.fillRect(0,0,64,64);return aoTex=new T.CanvasTexture(c)}
 var STEEL=null,BRASS=null,DARK=null,CHR=null;
-function mats(){if(STEEL)return;STEEL=mt(0xb9bec4,.28,.9);DARK=mt(0x202225,.5,.2);CHR=mt(0xdfe3e6,.12,1)}
+function mats(){if(STEEL)return;STEEL=mt(0xb9bec4,.4,.4);DARK=mt(0x202225,.5,.2);CHR=mt(0xdfe3e6,.25,.45)}
 /* ---- modul detallari ---- */
 function details(m,M,cfg){
  var g=new T.Group(),w=m.w/1000,h=m.h/1000,d=m.d/1000,fz=d/2+.02,k=(m.type||'')+' '+(m.name||'')+' '+(m.kind||''),
@@ -4872,7 +4876,7 @@ function details(m,M,cfg){
  if(cfg.hw&&M.det){
   var n=Math.max(1,Math.round(w/.45)),i;
   if(!isOven&&!isGas){/* petlyalar: eshik chetida, 2 ta (baland bo‘lsa 3 ta) */
-   var hn=h>1.2?3:2,sx=w/2-.012;for(i=0;i<hn;i++){var yy=(.08+(h-.16)*i/(hn-1));cy(g,.006,.03,-sx,yy,fz,CHR,null);bx(g,.014,.04,.006,-sx+.008,yy,fz-.002,STEEL)}}
+   var hH=Math.round(h*1000)-4,hn=hH<=900?2:hH<=1600?3:hH<=2000?4:5,sx=w/2-.012,nd=Math.max(1,m.doors||1),sg,hy;for(sg=-1;sg<=(nd>1?1:-1);sg+=2)for(i=0;i<hn;i++){hy=(100+(hH-200)*i/(hn-1))/1000;cy(g,.0175,.0125,sg*sx,hy,fz-.012,CHR,'z');bx(g,.014,.04,.006,sg*(sx-.008),hy,fz-.024,STEEL)}}
   if(!wall&&m.h<=1000&&M.det>1){/* tortma rels (yon devor ichida, yo‘naltirgich) */
    for(i=0;i<2;i++)bx(g,.008,.022,d*.8,(i?1:-1)*(w/2-.026),h*.55,-.02,STEEL)}
   if(M.det>1&&h>.5&&!wall){/* dekorativ panel: qopqoq ustida ingichka profil */
@@ -4908,14 +4912,19 @@ function lights(b,cfg,M){
   var cap=cy(spotsG,.035,.01,x,SY+.005,zc,new T.MeshBasicMaterial({color:0xfff6e6}),null)}}
 function apply(){
  var cfg=C(),k=mode(),M=MODES[k],b=new T.Box3().setFromObject(R.root);
- clear(G);mats();UB=0;
+ clear(G);mats();UB=0;if(cfg.night)cfg=Object.assign({},cfg,{spot:1,under:1,led:1});
  try{ren.setPixelRatio(Math.min(window.devicePixelRatio||1,M.pr));ren.shadowMap.enabled=true;
   ren.shadowMap.type=M.sh>1?T.PCFSoftShadowMap:T.PCFShadowMap;
   if(P0.sun){P0.sun.castShadow=M.sh>0;P0.sun.shadow.mapSize.set(M.sm||512,M.sm||512);if(P0.sun.shadow.map){P0.sun.shadow.map.dispose();P0.sun.shadow.map=null}
    P0.sun.shadow.radius=M.sh>1?3:1;P0.sun.shadow.bias=-.0004}
   sc.environment=M.env?(R.env||sc.environment):null;R.root.traverse(function(o){if(o.isMesh&&o.material&&!Array.isArray(o.material)&&o.material.isMeshStandardMaterial){var mu=o.material.userData;if(mu.r3b===undefined)mu.r3b=o.material.envMapIntensity==null?1:o.material.envMapIntensity;
-   o.material.envMapIntensity=M.env?mu.r3b*cfg.envI*((M.fx&&cfg.refl&&o.material.metalness>.5)?1.6:1):0}});
+   o.material.envMapIntensity=M.env?mu.r3b*cfg.envI*(cfg.night?.15:1)*((M.fx&&cfg.refl&&o.material.metalness>.5)?1.6:1):0}});
   ren.toneMappingExposure=1.05+.1*cfg.envI;P0.size()}catch(e){}
+ try{var nt=cfg.night?1:0,hm=sc.children.filter(function(o){return o.isHemisphereLight})[0],dls=sc.children.filter(function(o){return o.isDirectionalLight&&o!==P0.sun}),de=document.documentElement,dk=de.getAttribute('data-theme')==='dark'||(!de.getAttribute('data-theme')&&window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches);
+  if(hm){hm.intensity=nt?.1:.45;hm.color.setHex(nt?0x5b6fb0:0xffffff)}
+  if(P0.sun){P0.sun.intensity=nt?.12:.8;P0.sun.color.setHex(nt?0x8da4ff:0xffffff)}
+  dls.forEach(function(o){o.intensity=nt?.04:.25});
+  if(nt){ren.toneMappingExposure=.9;sc.background=new T.Color(0x060912);sc.userData.nbg=1}else if(sc.userData.nbg){sc.background=new T.Color(dk?0x1b1a17:0xeeeae3);sc.userData.nbg=0}}catch(e){}
  S.mods.forEach(function(m){if(m.hid)return;try{var d=details(m,M,{hw:cfg.hw,ao:cfg.ao,under:cfg.under,led:cfg.led,ledc:cfg.ledc,spotI:cfg.spotI});if(d)G.add(d)}catch(e){}});
  try{apron(cfg)}catch(e){}try{lights(b,cfg,M)}catch(e){}
  /* yaltiroq pol (reflection): faqat PRO/ULTRA */
@@ -4932,13 +4941,13 @@ var ar=0;(function rot(){requestAnimationFrame(rot);var c=C();if(c.autorot&&!doc
 /* ---- UI ---- */
 var aside=document.querySelector('aside');
 function sync(){var c=C(),el=document.querySelectorAll('#r3_ui [data-m]');el.forEach(function(b){b.classList.toggle('on',b.dataset.m===mode())});
- ['spot','under','led','ao','refl','hw','autorot','apron'].forEach(function(k){var e=$('r3_'+k);if(e)e.checked=!!c[k]});
- [['spotI','r3_spotI'],['ledI','r3_ledI'],['envI','r3_envI'],['rotS','r3_rotS']].forEach(function(a){var e=$(a[1]);if(e)e.value=c[a[0]]});var l=$('r3_ledc');if(l)l.value=c.ledc}
+ ['spot','under','led','ao','refl','hw','autorot','apron','night'].forEach(function(k){var e=$('r3_'+k);if(e)e.checked=!!c[k]});
+ [['spotI','r3_spotI'],['ledI','r3_ledI'],['envI','r3_envI'],['rotS','r3_rotS']].forEach(function(a){var e=$(a[1]);if(e)e.value=c[a[0]]});var l=$('r3_ledc');if(l)l.value=c.ledc;dnPaint()}
 if(aside&&!$('r3_d')){var d=document.createElement('details');d.id='r3_d';
  d.innerHTML='<summary>Realistik render (yoritish, detal, kamera)</summary><div id="r3_ui">'+
  '<div class="chips">'+Object.keys(MODES).map(function(k){return'<button data-m="'+k+'">'+MODES[k].n+'</button>'}).join('')+'</div>'+
  '<p id="r3_inf" style="font-size:11px;color:var(--mt);margin:6px 0"></p><div class="g">'+
- [['spot','Shift spot chiroqlari'],['under','Mebel osti yoritgich'],['led','LED lenta'],['ao','Ambient Occlusion'],['refl','Aks (reflection)'],['hw','Furnitura detallari'],['apron','Marmar fartuk']].map(function(a){return'<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="r3_'+a[0]+'" style="width:auto">'+a[1]+'</label>'}).join('')+
+ [['spot','Shift spot chiroqlari'],['under','Mebel osti yoritgich'],['led','LED lenta'],['ao','Ambient Occlusion'],['refl','Aks (reflection)'],['hw','Furnitura detallari'],['apron','Marmar fartuk'],['night','Tun rejimi']].map(function(a){return'<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="r3_'+a[0]+'" style="width:auto">'+a[1]+'</label>'}).join('')+
  '<label>Spot kuchi<input type="range" id="r3_spotI" min="0" max="2" step=".1"></label><label>LED yorqinligi<input type="range" id="r3_ledI" min=".2" max="1.4" step=".1"></label>'+
  '<label>Atrof yorug‘ligi<input type="range" id="r3_envI" min="0" max="2" step=".1"></label><label>LED rangi<input type="color" id="r3_ledc"></label></div>'+
  '<div class="g"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="r3_autorot" style="width:auto">360° aylantirish</label><label>Tezlik<input type="range" id="r3_rotS" min=".2" max="4" step=".2"></label></div>'+
@@ -4956,6 +4965,11 @@ if(aside&&!$('r3_d')){var d=document.createElement('details');d.id='r3_d';
   c[k]=e.target.type==='checkbox'?(e.target.checked?1:0):(e.target.type==='range'?+e.target.value:e.target.value);P0.save();
   if(k!=='autorot'&&k!=='rotS')R.post()});
  sync()}
+var dnb=null;function dnPaint(){if(!dnb)return;var n=C().night;dnb.textContent=n?'🌙 Tun':'☀️ Kunduz';dnb.style.borderColor=n?'var(--ac)':'';var e=$('r3_night');if(e)e.checked=!!n}
+dnb=document.createElement('button');dnb.id='r3_dn';dnb.title='Kunduz / tun ko‘rinishi';
+dnb.onclick=function(){var c=C();c.night=c.night?0:1;P0.save();dnPaint();R.post()};
+var vw2=$('views');if(vw2)vw2.appendChild(dnb);dnPaint();
+var thb=$('theme');if(thb)thb.addEventListener('click',function(){setTimeout(R.post,0)});
 setTimeout(function(){R.post()},300);
 window.__r3api={apply:R.post,modes:MODES,mode:mode};
 })();
