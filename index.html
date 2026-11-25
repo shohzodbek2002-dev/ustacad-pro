@@ -2131,6 +2131,23 @@ function ovStrip(g,G,s0,s1,o0,o1,y0,hgt,mt,name,ox,oz){
  sh.moveTo(A[0][0],A[0][1]);for(i=1;i<=n;i++)sh.lineTo(A[i][0],A[i][1]);for(i=n;i>=0;i--)sh.lineTo(B[i][0],B[i][1]);sh.closePath();
  var geo=new THREE.ExtrudeGeometry(sh,{depth:hgt/1000,bevelEnabled:false});geo.rotateX(-Math.PI/2);
  return ovMesh(g,geo,mt,name,0,y0,0,Math.round(ovLen(G,s0,s1,0))+' × '+Math.round(hgt)+' × '+Math.round(Math.abs(o1-o0))+' (egma)')}
+/* Oval mebel: ramkali fasad turlari (alyumin, shisha, shaker, vitrina, to‘r) */
+function ovFrame(p,G,s0,s1,Hh,ft,tp,Fd,hp,m){
+ if(!/^(alyumin|shisha|shaker|vitrina|setka)$/.test(tp||''))return false;
+ var b=fbw(tp),y0=2,W=s1-s0,ih=Hh-2*b,ox=hp.x,oz=hp.z,o=Math.max(b,20);
+ var FM=tp==='alyumin'?(pbMat('Metall zanglamas')||new THREE.MeshStandardMaterial({color:0xaeb3b8,metalness:.85,roughness:.3})):Fd;
+ var GL=pbMat('Shisha shaffof')||new THREE.MeshStandardMaterial({color:0x9fd6e6,transparent:true,opacity:.28,roughness:.1});
+ function st(a,c,z0,z1,yy,hh,mt,nm){if(c-a<1||hh<1)return;ovStrip(p,G,a,c,z0,z1,yy,hh,mt,nm,ox,oz)}
+ st(s0,s1,0,ft,y0,b,FM,'Eshik');st(s0,s1,0,ft,y0+Hh-b,b,FM,'Eshik');
+ st(s0,s0+b,0,ft,y0+b,ih,FM,'Eshik');st(s1-b,s1,0,ft,y0+b,ih,FM,'Eshik');
+ var a=s0+b,c=s1-b,yb=y0+b;
+ if(tp==='shisha'||tp==='alyumin')st(a,c,ft/2-2,ft/2+2,yb,ih,GL,'Shisha');
+ else if(tp==='shaker')st(a,c,3,ft-5,yb,ih,Fd,'Eshik');
+ else if(tp==='vitrina'){var gh=Math.round((Hh-3*b)*.55),p2=Hh-3*b-gh;
+  st(a,c,0,ft,yb,p2,Fd,'Eshik');st(s0,s1,0,ft,yb+p2,b,FM,'Eshik');st(a,c,ft/2-2,ft/2+2,yb+p2+b,gh,GL,'Shisha')}
+ else if(tp==='setka'){var RT=new THREE.MeshStandardMaterial({color:0xc9a66b,roughness:.85});
+  st(a,c,2,ft-8,yb,ih,new THREE.MeshStandardMaterial({color:0x3a2f24,roughness:.9}),'Eshik');st(a,c,ft-8,ft-4,yb,ih,RT,'Setka')}
+ return true}
 function ovOyma(p,G,s0,s1,y0,Hh,ox,oz,pt,Fm){var M=new THREE.MeshStandardMaterial({color:Fm&&Fm.color?(Fm.userData&&Fm.userData.bc||Fm.color).clone().multiplyScalar(.9):0x888888,roughness:.6,side:THREE.DoubleSide}),th=8,hh=1.6,n,k,q;
  function pl(P){var Q=[],a,b,l,N,u,i,k,t,pos=[],idx=[],nx,ny,tx,ty,A,B,o;
   for(i=1;i<P.length;i++){a=P[i-1];b=P[i];l=Math.hypot(b[0]-a[0],b[1]-a[1]);N=Math.max(1,Math.ceil(l/10));for(u=(i===1?0:1);u<=N;u++)Q.push([a[0]+(b[0]-a[0])*u/N,a[1]+(b[1]-a[1])*u/N])}
@@ -2199,7 +2216,7 @@ function buildOval(m){
   }else{
    var s0=G.z0+2+i*(L.W+2),s1=s0+L.W,left=n<3?((n===1)||(i<n/2)):(i%2===0),hp=ovPt(G,left?s0:s1,0),st=fo.st||'',Fd=Fi;
    if(st==='rebra'&&(!Fi.map||/^(grain|brushed)$/.test(Fi.userData.tx||''))){Fd=matN(fo.mat&&MATS[fo.mat]!==undefined?fo.mat:m.front,.45);Fd.map=ovRibTex();Fd.bumpMap=ovRibTex();Fd.bumpScale=.3;Fd.userData.rib=true;Fd.roughnessMap=null;if(Fd.userData.bc)Fd.color.copy(Fd.userData.bc)}
-   p.position.set(hp.x/1000,0,hp.z/1000);ovStrip(p,G,s0,s1,0,ft,2,L.Hh,Fd,'Eshik',hp.x,hp.z);if((fo.ft||(fo.oy?'oymali':m.ftype))==='oymali'&&st!=='rebra'&&st!=='oyna')ovOyma(p,G,s0,s1,2,L.Hh,hp.x,hp.z,fo.oy||m.oy||'ramka',Fd);
+   p.position.set(hp.x/1000,0,hp.z/1000);if(!ovFrame(p,G,s0,s1,L.Hh,ft,fo.ft||m.ftype,Fd,hp,m))ovStrip(p,G,s0,s1,0,ft,2,L.Hh,Fd,'Eshik',hp.x,hp.z);if((fo.ft||(fo.oy?'oymali':m.ftype))==='oymali'&&st!=='rebra'&&st!=='oyna')ovOyma(p,G,s0,s1,2,L.Hh,hp.x,hp.z,fo.oy||m.oy||'ramka',Fd);
    if(st==='rebra'&&L.W>200){var ga=s0+L.W*.4;ovStrip(p,G,ga,ga+70,-2,0,82,L.Hh-160,ovGlass(),'Dekor shisha',hp.x,hp.z)}
    if(st==='oyna')ovStrip(p,G,s0+15,s1-15,-4,0,27,L.Hh-50,ovMirror(),'Oyna',hp.x,hp.z);
    ovHandle(p,m,G,left?s1-35:s0+35,hp.x,hp.z,h/2,true);
