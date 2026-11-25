@@ -3299,7 +3299,7 @@ function sync(){if(scope==='sel'&&S.sel==null)scope='all';var m=S.sel!=null?get(
  $('#fc_rd').querySelectorAll('.ch').forEach(function(b){b.classList.toggle('on',+b.dataset.r===r)})}
 function draw(){var T=tg(),b=$('#fc_b'),c=dcol(),ut={},uo={},h='',cvs=[];
  T.forEach(function(m){ut[m.ftype||'oddiy']=1;if(m.ftype==='oymali')uo[m.oy||'ramka']=1});
- if(!T.length){b.innerHTML='<p class="nf" style="margin:12px 0">Fasadli modul yo‘q. Avval shkaf qo‘shing.</p>';return}
+ if(!T.length){var m0=S.sel!=null?get(S.sel):null,ov=(m0&&m0.type==='oval')||S.mods.some(function(q){return q.type==='oval'});b.innerHTML='<p class="nf" style="margin:12px 0">'+(m0&&m0.type==='oval'?'Tanlangan modul — oval mebel. Uning fasadi “Oval mebel konstruktori” orqali o‘zgartiriladi. Oddiy shkaf tanlang yoki “Hamma modullar” ni bosing.':(ov?'Bu yerda faqat oddiy shkaflar o‘zgaradi. Oval mebel fasadi “Oval mebel konstruktori” orqali sozlanadi.':'Fasadli modul yo‘q. Avval shkaf qo‘shing.'))+'</p>';return}
  h+='<h4>Fasad turi</h4><div class="gr">';
  TUR.forEach(function(d){h+='<div class="cd" data-t="'+d[0]+'"><canvas width="360" height="152" data-t="'+d[0]+'"></canvas><span class="bg">'+(ut[d[0]]?'<i>Ishlatilmoqda</i>':'')+'</span><b>'+pbE(d[1])+'</b><small>'+pbE(d[2])+'</small></div>'});
  h+='</div><h4>Oyma naqshlari</h4><div class="gr">';
