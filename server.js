@@ -168,7 +168,7 @@ function cfgFromEnv(env) {
   const list = (k) => String(env[k] || '').split(',').map(s => s.trim()).filter(Boolean);
   const cfg = {
     port: (env.PORT !== undefined && env.PORT !== '' && Number.isInteger(Number(env.PORT)) && Number(env.PORT) >= 0 && Number(env.PORT) < 65536) ? Number(env.PORT) : 8080,
-    host: env.HOST || '127.0.0.1',
+    host: env.HOST || (env.PORT ? '0.0.0.0' : '127.0.0.1'),
     origins: list('ALLOWED_ORIGINS'),
     uploadDir: path.resolve(env.UPLOAD_DIR || './uploads'),
     maxBytes: num('MAX_BYTES', 20 * 1024 * 1024),
@@ -347,6 +347,7 @@ async function rewardRef(cfg, invitee) {
 
 function grantPro(cfg, id, days) {
   const cur = cfg.dynPro[id];
+  if (cur === '' && days !== null) return true; // cheksiz Pro pasaytirilmaydi
   if (days === null) cfg.dynPro[id] = '';
   else { let base = todayStr(); if (cur && cur > base) base = cur; cfg.dynPro[id] = addDays(base, days); }
   return savePro(cfg);
@@ -430,6 +431,10 @@ function createApp(cfg) {
 
   async function handleUpload(req, res, cors) {
     const form = await readForm(req, cfg);
+    if (cfg.tgToken) {
+      const u = verifyInitData(String(form.get('initData') || ''), cfg.tgToken);
+      if (!u || !proStatus(cfg, u.id).pro) throw new HttpErr(403, 'Ruxsat yo\'q (Telegram orqali kiring, Pro kerak)');
+    }
     const f = form.get('file');
     if (!f || typeof f === 'string' || typeof f.arrayBuffer !== 'function') throw new HttpErr(400, '"file" maydoni yo\'q');
     const name = safeName(form.get('name') || f.name);
@@ -455,6 +460,8 @@ function createApp(cfg) {
     const user = verifyInitData(String(form.get('initData') || ''), cfg.tgToken);
     const ok = (user && String(user.id) === chat) || cfg.tgChats.includes(chat);
     if (!ok) throw new HttpErr(403, 'Bu chatga yuborishga ruxsat yo\'q');
+    const FREE = /^(ustacad-loyiha\.(png|json|pdf)|ustacad-zaxira|ustacad-jurnal\.json|ustacad-prisadka\.json|taklif\.pdf|ustacad-taklif\.pdf)/i;
+    if (!FREE.test(safeName(form.get('filename') || doc.name)) && !(user && proStatus(cfg, user.id).pro) && !cfg.tgChats.includes(chat)) throw new HttpErr(402, 'Bu fayl Pro tarifda');
     const fd = new FormData();
     fd.append('chat_id', chat);
     fd.append('caption', String(form.get('caption') || '').slice(0, 1000));
@@ -477,7 +484,7 @@ function createApp(cfg) {
     if (user) touchUser(cfg, user.id, 'app'); // statistika: ilovani ochgan (imzosi tekshirilgan) foydalanuvchi
     const pro = proStatus(cfg, user && user.id);
     const tr = (!pro.pro && user) ? trialState(cfg, user.id, true) : { trial: false, trialUntil: 0 };
-    send(res, 200, Object.assign({ ok: true, id: user ? String(user.id) : null }, pro, tr), cors);
+    send(res, 200, Object.assign({ ok: true, now: Date.now(), id: user ? String(user.id) : null }, pro, tr), cors);
   }
 
   async function handleHook(req, res) {
@@ -494,7 +501,7 @@ function createApp(cfg) {
     const origin = req.headers.origin;
     const cors = {};
     try {
-      const ip = req.socket.remoteAddress || '?';
+      const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || '?';
       if (!originAllowed(cfg, origin)) throw new HttpErr(403, 'Origin ruxsat etilmagan');
       if (origin) { cors['Access-Control-Allow-Origin'] = cfg.origins.includes('*') ? '*' : origin; cors['Vary'] = 'Origin'; }
       if (req.method === 'OPTIONS') {
