@@ -1748,8 +1748,8 @@ function oyHF(sp,W,H){if(!OYHFC||!sp||!sp.items)return null;var wm=OYHFC.get(sp)
  var r=null;try{r=oyHFbuild(sp,W,H)}catch(e){console.error('oyHF',e)}wm[key]=r;return r}
 function oyHFbuild(sp,W,H){
  if(typeof FDC==='undefined'||!sp.items||!sp.items.length)return null;
- var cs=Math.max(2,Math.max(W,H)/((window.__an>1)?640:450)),nx,ny,dx,dy,N,i,j,k;
- function dim(){nx=Math.max(8,Math.round(W/cs));ny=Math.max(8,Math.round(H/cs))}dim();while(nx*ny>160000){cs*=1.15;dim()}
+ var cs=Math.max(2,Math.max(W,H)/((window.__an>1)?560:400)),nx,ny,dx,dy,N,i,j,k;
+ function dim(){nx=Math.max(8,Math.round(W/cs));ny=Math.max(8,Math.round(H/cs))}dim();while(nx*ny>130000){cs*=1.15;dim()}
  dx=W/nx;dy=H/ny;N=(nx+1)*(ny+1);
  var gneg=new Float32Array(N),terr=new Float32Array(N),dist=new Float32Array(N),hh=new Float32Array(N);for(k=0;k<N;k++)dist[k]=1e9;
  var tl=sp.tools||{},va=(tl.v&&tl.v.ang)||90,bR=((tl.b&&tl.b.d)||6)/2,tv=Math.tan(va*Math.PI/360),dome=sp.dome,domeR=dome?dome.r:0;
@@ -1764,12 +1764,12 @@ function oyHFbuild(sp,W,H){
    if(d<hw){h=prof(d);if(h<gneg[kk])gneg[kk]=h}}}
  items.forEach(function(it){if(it.bk)return;var pp=FDC.itemPoly(it),P=pp.pts,eo=FDC.effOp(it),closed=pp.closed,dep=Math.max(.3,Math.min(it.depth||2,6)),hw,dd,prof,n=P.length,q,up,rw;
   if(n<2)return;
-  if(eo==='pocket'){if(!closed||n<3)return;up=-Math.min(dep,6);terrace(P,up,Math.max(Math.abs(up)*.5,1.2));return}
+  if(eo==='pocket'){if(!closed||n<3)return;up=-Math.min(dep,6);terrace(P,up,Math.max(Math.abs(up)*.5,1.2,Math.max(dx,dy)*2.2));return}
   if(eo==='flute'){dd=Math.min(dep,bR);hw=Math.sqrt(Math.max(0,bR*bR-(bR-dd)*(bR-dd)));prof=function(d){return -dd+(bR-Math.sqrt(Math.max(0,bR*bR-d*d)))}}
   else{dd=(eo==='groove')?Math.min(dep,6):Math.min(dep,2);hw=Math.max(.8,dd*tv,Math.max(dx,dy)*.9);prof=function(d){return -dd*(1-d/hw)}}
   var rr=Math.max(hw,domeR);for(q=1;q<n;q++)seg(P[q-1][0],P[q-1][1],P[q][0],P[q][1],hw,rr,prof);if(closed&&n>2)seg(P[n-1][0],P[n-1][1],P[0][0],P[0][1],hw,rr,prof);
-  if(closed&&it.up){up=it.up;terrace(P,up,Math.max(Math.abs(up)*1.5,3))}});
- (sp.rel||[]).forEach(function(r){var P=r.pts.map(function(p){return[p[0]*sx,p[1]*sy]});if(P.length>2)terrace(P,r.up,Math.max(Math.abs(r.up)*1.5,3))});
+  if(closed&&it.up){up=it.up;terrace(P,up,Math.max(Math.abs(up)*1.5,3,Math.max(dx,dy)*2.2))}});
+ (sp.rel||[]).forEach(function(r){var P=r.pts.map(function(p){return[p[0]*sx,p[1]*sy]});if(P.length>2)terrace(P,r.up,Math.max(Math.abs(r.up)*1.5,3,Math.max(dx,dy)*2.2))});
  var mn=0,mx=0,x,y,t;
  var mx0=dome?(dome.m||0)*sx:0,my0=dome?(dome.m||0)*sy:0;
  for(j=0;j<=ny;j++)for(i=0;i<=nx;i++){k=j*(nx+1)+i;x=i*dx;y=j*dy;var h=terr[k]+gneg[k];
@@ -2135,7 +2135,7 @@ function ovStrip(g,G,s0,s1,o0,o1,y0,hgt,mt,name,ox,oz){
 function ovFrame(p,G,s0,s1,Hh,ft,tp,Fd,hp,m){
  if(!/^(alyumin|shisha|shaker|vitrina|setka)$/.test(tp||''))return false;
  var b=fbw(tp),y0=2,W=s1-s0,ih=Hh-2*b,ox=hp.x,oz=hp.z,o=Math.max(b,20);
- var FM=tp==='alyumin'?(pbMat('Metall zanglamas')||new THREE.MeshStandardMaterial({color:0xaeb3b8,metalness:.85,roughness:.3})):Fd;
+ var FM=tp==='alyumin'?new THREE.MeshStandardMaterial({color:0xb4b9be,metalness:.35,roughness:.4}):Fd;
  var GL=pbMat('Shisha shaffof')||new THREE.MeshStandardMaterial({color:0x9fd6e6,transparent:true,opacity:.28,roughness:.1});
  function st(a,c,z0,z1,yy,hh,mt,nm){if(c-a<1||hh<1)return;ovStrip(p,G,a,c,z0,z1,yy,hh,mt,nm,ox,oz)}
  st(s0,s1,0,ft,y0,b,FM,'Eshik');st(s0,s1,0,ft,y0+Hh-b,b,FM,'Eshik');
