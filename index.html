@@ -1748,8 +1748,8 @@ function oyHF(sp,W,H){if(!OYHFC||!sp||!sp.items)return null;var wm=OYHFC.get(sp)
  var r=null;try{r=oyHFbuild(sp,W,H)}catch(e){console.error('oyHF',e)}wm[key]=r;return r}
 function oyHFbuild(sp,W,H){
  if(typeof FDC==='undefined'||!sp.items||!sp.items.length)return null;
- var cs=Math.max(2,Math.max(W,H)/((window.__an>1)?480:340)),nx,ny,dx,dy,N,i,j,k;
- function dim(){nx=Math.max(8,Math.round(W/cs));ny=Math.max(8,Math.round(H/cs))}dim();while(nx*ny>110000){cs*=1.15;dim()}
+ var cs=Math.max(2,Math.max(W,H)/((window.__an>1)?640:450)),nx,ny,dx,dy,N,i,j,k;
+ function dim(){nx=Math.max(8,Math.round(W/cs));ny=Math.max(8,Math.round(H/cs))}dim();while(nx*ny>160000){cs*=1.15;dim()}
  dx=W/nx;dy=H/ny;N=(nx+1)*(ny+1);
  var gneg=new Float32Array(N),terr=new Float32Array(N),dist=new Float32Array(N),hh=new Float32Array(N);for(k=0;k<N;k++)dist[k]=1e9;
  var tl=sp.tools||{},va=(tl.v&&tl.v.ang)||90,bR=((tl.b&&tl.b.d)||6)/2,tv=Math.tan(va*Math.PI/360),dome=sp.dome,domeR=dome?dome.r:0;
@@ -1775,6 +1775,7 @@ function oyHFbuild(sp,W,H){
  for(j=0;j<=ny;j++)for(i=0;i<=nx;i++){k=j*(nx+1)+i;x=i*dx;y=j*dy;var h=terr[k]+gneg[k];
   if(dome&&x>=mx0&&x<=W-mx0&&y>=my0&&y<=H-my0){t=Math.min(1,dist[k]/domeR);h+=dome.h*Math.sin(t*Math.PI/2)}
   hh[k]=h;if(h<mn)mn=h;if(h>mx)mx=h}
+ {var tq=new Float32Array(hh),mw=nx+1,ii,jj,kq;for(jj=1;jj<ny;jj++)for(ii=1;ii<nx;ii++){kq=jj*mw+ii;hh[kq]=(4*tq[kq]+2*(tq[kq-1]+tq[kq+1]+tq[kq-mw]+tq[kq+mw])+tq[kq-mw-1]+tq[kq-mw+1]+tq[kq+mw-1]+tq[kq+mw+1])/16}}
  return{nx:nx,ny:ny,dx:dx,dy:dy,W:W,H:H,h:hh,D:Math.max(.3,-mn+.3),mn:mn,mx:mx}}
 /* pos(gx,gy,hh): markazga nisbatan mm va taxta yuzidan balandlik (mm) -> [x,y,z] metrda */
 function oyHFmesh(p,hf,pos,mat){var nx=hf.nx,ny=hf.ny,V=[],UV=[],I=[],C=[],i,j,a,b,c,d,q,m=nx+1,ds=Math.max(.6,-hf.mn);
