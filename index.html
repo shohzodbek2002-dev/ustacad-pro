@@ -3245,7 +3245,7 @@ var RADS=[0,5,10,20,30,50];
 var PW=450,PH=700;
 function shade(c,f){var r=(c>>16)&255,g=(c>>8)&255,b=c&255,t=f>0?255:0,a=Math.abs(f);r=Math.round(r+(t-r)*a);g=Math.round(g+(t-g)*a);b=Math.round(b+(t-b)*a);return'rgb('+r+','+g+','+b+')'}
 function rr(x,X,Y,W,H,R){x.beginPath();x.moveTo(X+R,Y);x.arcTo(X+W,Y,X+W,Y+H,R);x.arcTo(X+W,Y+H,X,Y+H,R);x.arcTo(X,Y+H,X,Y,R);x.arcTo(X,Y,X+W,Y,R);x.closePath()}
-function tg(){var A=(scope==='sel'&&S.sel!=null)?(function(){var m=get(S.sel);return m?[m]:[]})():S.mods;return A.filter(function(m){return m.type!=='oval'})}
+function tg(){var A=(scope==='sel'&&S.sel!=null)?(function(){var m=get(S.sel);return m?[m]:[]})():S.mods;return A}
 function same(T,f){if(!T.length)return null;var v=f(T[0]),i;for(i=1;i<T.length;i++)if(f(T[i])!==v)return null;return v}
 function dcol(){var T=tg(),n=T.length?T[0].front:'',sp=null;try{sp=pbSpec(n)}catch(e){}if(sp&&sp.c!=null)return sp.c;return MATS[n]!=null?MATS[n]:0xd8c3a5}
 /* oyma chiziqlari (markazga nisbatan, mm) */
@@ -3293,7 +3293,7 @@ var el=document.createElement('div');el.id='fcat';
 el.innerHTML='<div class="sh"><div class="hd"><span>🪟 Fasad turi va oymalar</span><span><button id="fc_big" aria-label="Kattalashtirish">⤢</button><button id="fc_x" aria-label="Yopish">✕</button></span></div><div class="tb"><div class="nf" id="fc_nf"></div><div class="rw" id="fc_sc"><button class="ch" data-sc="sel">Tanlangan modul</button><button class="ch" data-sc="all">Hamma modullar</button></div><div class="rw" id="fc_rd"><span class="nf">Burchak R:</span></div></div><div class="bd" id="fc_b"></div></div>';document.body.appendChild(el);
 $('#fc_rd').insertAdjacentHTML('beforeend',RADS.map(function(n){return'<button class="ch" data-r="'+n+'">'+(n?n+' mm':'To‘g‘ri')+'</button>'}).join(''));
 function sync(){if(scope==='sel'&&S.sel==null)scope='all';var m=S.sel!=null?get(S.sel):null,T=tg();
- $('#fc_nf').textContent=(scope==='sel'&&m?'Tanlangan: '+(m.name||m.type)+' — tanlov shunga qo‘llanadi':'Hamma modullarga qo‘llanadi'+(S.sel==null?' (3D da modulni bosib tanlasangiz, faqat shunga)':''))+' · Oval shkaflar bundan mustasno';
+ $('#fc_nf').textContent=(scope==='sel'&&m?'Tanlangan: '+(m.name||m.type)+' — tanlov shunga qo‘llanadi':'Hamma modullarga qo‘llanadi'+(S.sel==null?' (3D da modulni bosib tanlasangiz, faqat shunga)':''))+'';
  $('#fc_sc').querySelectorAll('.ch').forEach(function(b){b.classList.toggle('on',b.dataset.sc===scope);if(b.dataset.sc==='sel')b.disabled=S.sel==null});
  var r=same(T,function(m){return +m.fr||0});
  $('#fc_rd').querySelectorAll('.ch').forEach(function(b){b.classList.toggle('on',+b.dataset.r===r)})}
