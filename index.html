@@ -2133,7 +2133,16 @@ function ovStrip(g,G,s0,s1,o0,o1,y0,hgt,mt,name,ox,oz){
  return ovMesh(g,geo,mt,name,0,y0,0,Math.round(ovLen(G,s0,s1,0))+' × '+Math.round(hgt)+' × '+Math.round(Math.abs(o1-o0))+' (egma)')}
 /* Oval mebel: ramkali fasad turlari (alyumin, shisha, shaker, vitrina, to‘r) */
 function ovFrame(p,G,s0,s1,Hh,ft,tp,Fd,hp,m){
- if(!/^(alyumin|shisha|shaker|vitrina|setka)$/.test(tp||''))return false;
+ if(!/^(alyumin|shisha|shaker|vitrina|setka|ramkali|frezerovkali|reyka|reyka-gor)$/.test(tp||''))return false;
+ function tint(k){var c=Fd.clone();if(c.color)c.color.multiplyScalar(k);return c}
+ if(tp==='frezerovkali'||tp==='reyka'||tp==='reyka-gor'){
+  var Wd=s1-s0,ax=hp.x,az=hp.z;
+  function sq(a,c,z0,z1,yy,hh,mt,nm){if(c-a<1||hh<1)return;ovStrip(p,G,a,c,z0,z1,yy,hh,mt,nm,ax,az)}
+  if(tp==='frezerovkali'){sq(s0,s1,0,ft,2,Hh,Fd,'Eshik');sq(s0+45,s1-45,ft,ft+2,2+45,Hh-90,tint(.85),'Eshik');return true}
+  var dk=tint(.7),k,n,st0;sq(s0,s1,0,10,2,Hh,dk,'Eshik');
+  if(tp==='reyka'){var W2=Wd-16;n=Math.max(1,Math.floor((W2-24)/40)+1);st0=s0+8+(W2-((n-1)*40+24))/2;for(k=0;k<n;k++)sq(st0+k*40,st0+k*40+24,10,18,10,Hh-16,Fd,'Reyka')}
+  else{var H2=Hh-16;n=Math.max(1,Math.floor((H2-24)/40)+1);st0=2+8+(H2-((n-1)*40+24))/2;for(k=0;k<n;k++)sq(s0+8,s1-8,10,18,st0+k*40,24,Fd,'Reyka')}
+  return true}
  var b=fbw(tp),y0=2,W=s1-s0,ih=Hh-2*b,ox=hp.x,oz=hp.z,o=Math.max(b,20);
  var FM=tp==='alyumin'?new THREE.MeshStandardMaterial({color:0xb4b9be,metalness:.35,roughness:.4}):Fd;
  var GL=pbMat('Shisha shaffof')||new THREE.MeshStandardMaterial({color:0x9fd6e6,transparent:true,opacity:.28,roughness:.1});
@@ -2143,6 +2152,7 @@ function ovFrame(p,G,s0,s1,Hh,ft,tp,Fd,hp,m){
  var a=s0+b,c=s1-b,yb=y0+b;
  if(tp==='shisha'||tp==='alyumin')st(a,c,ft/2-2,ft/2+2,yb,ih,GL,'Shisha');
  else if(tp==='shaker')st(a,c,3,ft-5,yb,ih,Fd,'Eshik');
+ else if(tp==='ramkali')st(a,c,5,13,yb,ih,Fd,'Eshik');
  else if(tp==='vitrina'){var gh=Math.round((Hh-3*b)*.55),p2=Hh-3*b-gh;
   st(a,c,0,ft,yb,p2,Fd,'Eshik');st(s0,s1,0,ft,yb+p2,b,FM,'Eshik');st(a,c,ft/2-2,ft/2+2,yb+p2+b,gh,GL,'Shisha')}
  else if(tp==='setka'){var RT=new THREE.MeshStandardMaterial({color:0xc9a66b,roughness:.85});
@@ -5990,7 +6000,7 @@ function lights(b,cfg,M){
  clear(spotsG);if(!M.spots||!cfg.spot||b.isEmpty())return;
  var n=Math.min(M.spots,Math.max(2,Math.round((b.max.x-b.min.x)/.6))),i,H=(S.set.rh||3000)/1000,SY=S.set.rc?(S.set.rh||3000)/1000-.012:Math.min((S.set.rh||3000)/1000,2.6),zc=(b.max.z+b.min.z)/2+.3;
  for(i=0;i<n;i++){var x=b.min.x+(b.max.x-b.min.x)*(i+.5)/n,l=new T.SpotLight(0xfff1dc,1.3*cfg.spotI,H+1,.6,.7,1.4);l.position.set(x,SY,zc);l.target.position.set(x,0,zc-.2);
-  if(M.sh>1&&i<4){l.castShadow=true;l.shadow.mapSize.set(M.sm/2,M.sm/2);l.shadow.bias=-.0005}spotsG.add(l);spotsG.add(l.target);
+  if(M.sh>1&&i<4){l.castShadow=true;l.shadow.mapSize.set(M.sm/2,M.sm/2);l.shadow.bias=-.001;l.shadow.normalBias=.04}spotsG.add(l);spotsG.add(l.target);
   var cap=cy(spotsG,.035,.01,x,SY+.005,zc,new T.MeshBasicMaterial({color:0xfff6e6}),null)}}
 function apply(){
  var cfg=C(),k=mode(),M=MODES[k],b=new T.Box3().setFromObject(R.root);
