@@ -1744,12 +1744,12 @@ function oyRR(a,b,ya,yb,c){var pts=[],k,n=5,cs=[[b-c,ya+c,-90],[b-c,yb-c,0],[a+c
 
 /* ===== 3D RELYEF: oyma (kesilgan) va borma (ko‘tarilgan) joylar ===== */
 var OYHFC=typeof WeakMap!=='undefined'?new WeakMap():null;
-function oyHF(sp,W,H){if(!OYHFC||!sp||!sp.items)return null;var wm=OYHFC.get(sp);if(!wm){wm={};OYHFC.set(sp,wm)}var key=Math.round(W)+'x'+Math.round(H);if(wm[key]!==undefined)return wm[key];
+function oyHF(sp,W,H){if(!OYHFC||!sp||!sp.items)return null;var wm=OYHFC.get(sp);if(!wm){wm={};OYHFC.set(sp,wm)}var key=Math.round(W)+'x'+Math.round(H)+'q'+((window.__an>1)?1:0);if(wm[key]!==undefined)return wm[key];
  var r=null;try{r=oyHFbuild(sp,W,H)}catch(e){console.error('oyHF',e)}wm[key]=r;return r}
 function oyHFbuild(sp,W,H){
  if(typeof FDC==='undefined'||!sp.items||!sp.items.length)return null;
- var cs=Math.max(3,Math.max(W,H)/240),nx,ny,dx,dy,N,i,j,k;
- function dim(){nx=Math.max(8,Math.round(W/cs));ny=Math.max(8,Math.round(H/cs))}dim();while(nx*ny>90000){cs*=1.15;dim()}
+ var cs=Math.max(2,Math.max(W,H)/((window.__an>1)?480:340)),nx,ny,dx,dy,N,i,j,k;
+ function dim(){nx=Math.max(8,Math.round(W/cs));ny=Math.max(8,Math.round(H/cs))}dim();while(nx*ny>110000){cs*=1.15;dim()}
  dx=W/nx;dy=H/ny;N=(nx+1)*(ny+1);
  var gneg=new Float32Array(N),terr=new Float32Array(N),dist=new Float32Array(N),hh=new Float32Array(N);for(k=0;k<N;k++)dist[k]=1e9;
  var tl=sp.tools||{},va=(tl.v&&tl.v.ang)||90,bR=((tl.b&&tl.b.d)||6)/2,tv=Math.tan(va*Math.PI/360),dome=sp.dome,domeR=dome?dome.r:0;
@@ -1766,7 +1766,7 @@ function oyHFbuild(sp,W,H){
   if(n<2)return;
   if(eo==='pocket'){if(!closed||n<3)return;up=-Math.min(dep,6);terrace(P,up,Math.max(Math.abs(up)*.5,1.2));return}
   if(eo==='flute'){dd=Math.min(dep,bR);hw=Math.sqrt(Math.max(0,bR*bR-(bR-dd)*(bR-dd)));prof=function(d){return -dd+(bR-Math.sqrt(Math.max(0,bR*bR-d*d)))}}
-  else{dd=(eo==='groove')?Math.min(dep,6):Math.min(dep,2);hw=Math.max(.8,dd*tv,Math.max(dx,dy)*1.15);prof=function(d){return -dd*(1-d/hw)}}
+  else{dd=(eo==='groove')?Math.min(dep,6):Math.min(dep,2);hw=Math.max(.8,dd*tv,Math.max(dx,dy)*.9);prof=function(d){return -dd*(1-d/hw)}}
   var rr=Math.max(hw,domeR);for(q=1;q<n;q++)seg(P[q-1][0],P[q-1][1],P[q][0],P[q][1],hw,rr,prof);if(closed&&n>2)seg(P[n-1][0],P[n-1][1],P[0][0],P[0][1],hw,rr,prof);
   if(closed&&it.up){up=it.up;terrace(P,up,Math.max(Math.abs(up)*1.5,3))}});
  (sp.rel||[]).forEach(function(r){var P=r.pts.map(function(p){return[p[0]*sx,p[1]*sy]});if(P.length>2)terrace(P,r.up,Math.max(Math.abs(r.up)*1.5,3))});
@@ -1777,15 +1777,15 @@ function oyHFbuild(sp,W,H){
   hh[k]=h;if(h<mn)mn=h;if(h>mx)mx=h}
  return{nx:nx,ny:ny,dx:dx,dy:dy,W:W,H:H,h:hh,D:Math.max(.3,-mn+.3),mn:mn,mx:mx}}
 /* pos(gx,gy,hh): markazga nisbatan mm va taxta yuzidan balandlik (mm) -> [x,y,z] metrda */
-function oyHFmesh(p,hf,pos,mat){var nx=hf.nx,ny=hf.ny,V=[],UV=[],I=[],i,j,a,b,c,d,q,m=nx+1;
- if(mat.side!==THREE.DoubleSide){mat.side=THREE.DoubleSide;mat.needsUpdate=true}
- for(j=0;j<=ny;j++)for(i=0;i<=nx;i++){var gx=i*hf.dx-hf.W/2,gy=j*hf.dy-hf.H/2;q=pos(gx,gy,hf.D+hf.h[j*m+i]);V.push(q[0],q[1],q[2]);UV.push(gx/1000+.5,gy/1000+.5)}
+function oyHFmesh(p,hf,pos,mat){var nx=hf.nx,ny=hf.ny,V=[],UV=[],I=[],C=[],i,j,a,b,c,d,q,m=nx+1,ds=Math.max(.6,-hf.mn);
+ mat=mat.clone();mat.vertexColors=true;mat.side=THREE.DoubleSide;
+ for(j=0;j<=ny;j++)for(i=0;i<=nx;i++){var gx=i*hf.dx-hf.W/2,gy=j*hf.dy-hf.H/2;q=pos(gx,gy,hf.D+hf.h[j*m+i]);V.push(q[0],q[1],q[2]);UV.push(gx/1000+.5,gy/1000+.5);var cf=1-.42*Math.min(1,Math.max(0,-hf.h[j*m+i])/ds);C.push(cf,cf,cf)}
  for(j=0;j<ny;j++)for(i=0;i<nx;i++){a=j*m+i;b=a+1;c=a+m;d=c+1;I.push(a,b,c,b,d,c)}
- function skirt(list){var k,s=V.length/3,t,g;for(k=0;k<list.length;k++){t=list[k];i=t%m;j=(t-i)/m;g=pos(i*hf.dx-hf.W/2,j*hf.dy-hf.H/2,0);V.push(g[0],g[1],g[2]);UV.push(0,0)}
+ function skirt(list){var k,s=V.length/3,t,g;for(k=0;k<list.length;k++){t=list[k];i=t%m;j=(t-i)/m;g=pos(i*hf.dx-hf.W/2,j*hf.dy-hf.H/2,0);V.push(g[0],g[1],g[2]);UV.push(0,0);C.push(1,1,1)}
   for(k=0;k<list.length-1;k++){I.push(list[k],list[k+1],s+k,list[k+1],s+k+1,s+k)}}
  var e1=[],e2=[],e3=[],e4=[];for(i=0;i<=nx;i++){e1.push(i);e2.push(ny*m+i)}for(j=0;j<=ny;j++){e3.push(j*m);e4.push(j*m+nx)}
  skirt(e1);skirt(e2);skirt(e3);skirt(e4);
- var geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(V,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(UV,2));
+ var geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(V,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(UV,2));geo.setAttribute('color',new THREE.Float32BufferAttribute(C,3));
  geo.setIndex(new THREE.BufferAttribute(new Uint32Array(I),1));geo.computeVertexNormals();
  var o=new THREE.Mesh(geo,mat);o.castShadow=true;o.receiveShadow=true;o.userData.part='Oyma';p.add(o);return o}
 function oyma(p,W,Hh,x,y,F,pt,ft){var G=new THREE.MeshStandardMaterial({color:F&&F.color?(F.userData&&F.userData.bc||F.color).clone().multiplyScalar(.6):0x555555,roughness:.75}),z=ft/2+.3,th=6,hz=1.2,n,k,q;
