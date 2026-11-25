@@ -1983,9 +1983,10 @@ renderer.domElement.addEventListener("pointerup",function(e){
  var r=renderer.domElement.getBoundingClientRect();
  ray.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1),cam);
  var hit=rayHit(root.children);
- if(!hit){S.sel=null;ui();rebuild();return}
- var o=hit.object;while(o&&o.userData.id==null)o=o.parent;
- var nid=o?o.userData.id:null;
+ if(!hit){S.sel=null;S.cpSel=null;ui();rebuild();return}
+ var o=hit.object,cpi=null;while(o&&o.userData.id==null){if(cpi==null&&o.userData.cpi!=null)cpi=o.userData.cpi;o=o.parent}
+ var nid=o?o.userData.id:null,cm=nid!=null?get(nid):null;
+ if(cm&&cm.type==='custom'&&cpi!=null){if(nid===S.sel&&S.cpMod===nid&&S.cpSel===cpi)S.cpSel=null;else{S.sel=nid;S.cpMod=nid;S.cpSel=cpi}ui();rebuild();hintDrag(e.pointerType!=="mouse");return}
  if(nid!=null&&nid===S.sel){S.sel=null;ui();rebuild();toast("Tanlov bekor qilindi");return}
  S.sel=nid;ui();rebuild();
  hintDrag(e.pointerType!=="mouse")
@@ -2861,8 +2862,9 @@ function arcGeo(p){var f=Math.round((+p.sg||0)/Math.max(1,p.d)*1000)/1000,b=Math
  var g=new THREE.ExtrudeGeometry(sh,{depth:1,bevelEnabled:false,curveSegments:32});g.rotateX(-Math.PI/2);g.translate(0,-.5,0);return ARCG[key]=g}
 function prim(g,p,mm,x,y,z){var geo=p.k==='arc'?arcGeo(p):primGeo(p.k),o=new THREE.Mesh(geo,mm);o.scale.set(p.w/1000,p.h/1000,p.d/1000);o.position.set(x/1000,y/1000,z/1000);o.castShadow=o.receiveShadow=true;o.userData.part=p.n;o.userData.dim=Math.round(p.w)+' × '+Math.round(p.h)+' × '+Math.round(p.d);o.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo,28),lineMat));g.add(o);return o}
 function buildCustom(m){var g=new THREE.Group();g.userData.id=m.id;g.position.set(m.x/1000,m.y/1000,(m.z||0)/1000);var HD=mat(0xd8cfbf,.9);
- m.cp.forEach(function(p){var mm=p.mat&&MATS[p.mat]?matN(p.mat,p.mt==='front'?.45:.9):p.nc?mat(p.col||0xcccccc,.9):p.mt==='glass'?new THREE.MeshStandardMaterial({color:0xcfe6ee,transparent:true,opacity:.45,roughness:.05,metalness:.6}):p.mt==='hdf'?HD:p.mt==='front'?matN(m.front,.45):matN(m.body),
+ m.cp.forEach(function(p,i){var mm=p.mat&&MATS[p.mat]?matN(p.mat,p.mt==='front'?.45:.9):p.nc?mat(p.col||0xcccccc,.9):p.mt==='glass'?new THREE.MeshStandardMaterial({color:0xcfe6ee,transparent:true,opacity:.45,roughness:.05,metalness:.6}):p.mt==='hdf'?HD:p.mt==='front'?matN(m.front,.45):matN(m.body),
   cx=p.x+p.w/2-m.w/2,cy=p.y+p.h/2,cz=p.z+p.d/2-m.d/2,o=(p.k&&p.k!=='box')?prim(g,p,mm,cx,cy,cz):box(g,p.w,p.h,p.d,cx,cy,cz,mm,p.n);
+  o.userData.cpi=i;if(S.sel===m.id&&S.cpMod===m.id&&S.cpSel===i&&o.material&&o.material.clone){o.material=o.material.clone();o.material.emissive=new THREE.Color(0xff8a2a);o.material.emissiveIntensity=.5}
   if(p.rx||p.ry||p.rz){o.rotation.order='YXZ';o.rotation.set((p.rx||0)*Math.PI/180,(p.ry||0)*Math.PI/180,(p.rz||0)*Math.PI/180)}});return g}
 function cpEg(p){return p.eg||(p.mt==='hdf'?[0,0,0,0]:p.mt==='front'?[1,1,1,1]:[1,0,0,0])}
 function customParts(m){var P=[];m.cp.forEach(function(p){var a=[p.w,p.h,p.d].sort(function(x,y){return y-x}),hd=p.mt==='hdf',fr=p.mt==='front',l=Math.round(a[0]),wd=Math.round(a[1]),fl=cpEg(p);if(p.nc||(p.k&&p.k!=='box'&&p.k!=='arc'&&(p.k!=='cyl'||p.h>50))||(p.mat&&/^(Metall|Mato|Charm)/.test(p.mat)))return;if(p.mt==='glass'||p.mat==='Shisha shaffof'){P.push({name:p.n||'Oyna',L:l,W:wd,T:Math.round(a[2]),q:1,mt:'Shisha '+Math.round(a[2])+' mm',fl:[0,0,0,0],e:0,k:'g'});return}
@@ -2870,13 +2872,17 @@ function customParts(m){var P=[];m.cp.forEach(function(p){var a=[p.w,p.h,p.d].so
 var PKINDS=[['box','Taxta / kub'],['arc','Egri taxta (botiq/qabariq)'],['cyl','Silindr'],['cone','Konus'],['sph','Shar'],['pyr','Piramida'],['tri','Uchburchak prizma'],['tor','Halqa (tor)']];
 function matOpts(sel){return"<option value=''>Modul materiali</option>"+Object.keys(MATS).map(function(k){return"<option value=\""+k+"\""+(sel===k?' selected':'')+">"+k+"</option>"}).join('')}
 function cpHTML(m){var h=(m.gen?genHTML(m):"")+shHTML(m)+"<p style='margin:8px 0 4px;font-weight:600'>Umumiy o‘lcham: "+Math.round(m.w)+" × "+Math.round(m.h)+" × "+Math.round(m.d)+" mm</p><p style='margin:0 0 6px;font-size:12px;color:var(--mt)'>Detallar (mm): X – chapdan, Y – poldan, Z – orqadan</p>";
- m.cp.forEach(function(p,i){h+="<div style='border:1px solid var(--bd);border-radius:8px;padding:6px;margin-bottom:6px'><label>Nomi<input type='text' maxlength='30' data-cp='"+i+":n' value=\""+String(p.n).replace(/"/g,'')+"\"></label><div style='display:grid;grid-template-columns:repeat(3,1fr);gap:4px'>"+
+ var cs=(S.cpMod===m.id&&S.cpSel!=null&&S.cpSel<m.cp.length)?S.cpSel:null;
+ h+="<label>Detalni tanlash<select id='cp_pick'><option value=''>— tanlang (yoki 3D da detalni bosing) —</option>"+m.cp.map(function(q,j){return"<option value='"+j+"'"+(cs===j?' selected':'')+">"+(j+1)+". "+String(q.n).replace(/["<>]/g,'')+"</option>"}).join('')+"</select></label>"+(cs!=null?"<p style='margin:6px 0;font-size:12px;color:var(--mt)'>Tanlangan detal tahrirlanmoqda · <a href='#' id='cp_all' style='color:var(--ac,#e08a3c)'>hamma detallar</a></p>":(m.cp.length>12?"<p style='margin:6px 0;font-size:12px;color:var(--mt)'>Detal ko‘p — tahrirlash uchun yuqoridan tanlang yoki 3D da bosing.</p>":""));
+ m.cp.forEach(function(p,i){if(!(cs==null?m.cp.length<=12:cs===i))return;h+="<div style='border:1px solid var(--bd);border-radius:8px;padding:6px;margin-bottom:6px'><label>Nomi<input type='text' maxlength='30' data-cp='"+i+":n' value=\""+String(p.n).replace(/"/g,'')+"\"></label><div style='display:grid;grid-template-columns:repeat(3,1fr);gap:4px'>"+
  [['w','Eni'],['h','Bo‘yi'],['d','Chuq.'],['x','X'],['y','Y'],['z','Z'],['rx','Burish X°'],['ry','Burish Y°'],['rz','Burish Z°']].concat(p.k==='arc'?[['sg','Old egriligi (− botiq, + qabariq)'],['sb','Orqa egriligi (mm)']]:[]).map(function(f){return"<label>"+f[1]+"<input type='number' data-cp='"+i+":"+f[0]+"' value='"+(p[f[0]]||0)+"'></label>"}).join('')+"</div><div style='display:flex;flex-wrap:wrap;gap:4px 10px;margin:6px 0;font-size:12px;color:var(--mt)'><span>Qirra:</span>"+[0,1,2,3].map(function(j){return"<label style='display:flex;gap:3px;align-items:center'><input type='checkbox' style='width:auto' data-cpe='"+i+":"+j+"'"+(cpEg(p)[j]?' checked':'')+">"+(j<2?'uzun':'qisqa')+"</label>"}).join('')+"<label style='display:flex;gap:3px;align-items:center'><input type='checkbox' style='width:auto' data-cpr='"+i+"'"+(p.dr!==0?' checked':'')+">prisadka</label></div><div class='row' style='flex-wrap:wrap'><select data-cpm='"+i+"' style='flex:1'>"+[['body','Korpus'],['front','Fasad'],['hdf','HDF'],['glass','Oyna / ko‘zgu']].map(function(o){return"<option value='"+o[0]+"'"+(p.mt===o[0]?' selected':'')+">"+o[1]+"</option>"}).join('')+"</select><select data-cpk='"+i+"' title='Shakl turi' style='flex:1'>"+PKINDS.map(function(o){return"<option value='"+o[0]+"'"+((p.k||'box')===o[0]?' selected':'')+">"+o[1]+"</option>"}).join('')+"</select><select data-cpmat='"+i+"' title='Material' style='flex:1'>"+matOpts(p.mat)+"</select><button data-cpd='"+i+"' title='Nusxalash'>⧉</button><button data-cpx='"+i+"' title='O‘chirish'>✕</button></div></div>"});
  return h+"<div class='row'><button class='pr' id='cp_add'>＋ Detal qo‘shish</button></div>"}
 function cpBind(el,m){
  if(m.gen)genBind(el,m);
  shBind(el,m);
  function re(){cpFix(m);rebuild();cutting();calc();draw();furnUI();drillUI();mpUI()}
+ var pk=$('#cp_pick');if(pk)pk.onchange=function(){S.cpMod=m.id;S.cpSel=pk.value===''?null:+pk.value;all()};
+ var pa=$('#cp_all');if(pa)pa.onclick=function(ev){ev.preventDefault();S.cpSel=null;all()};
  el.querySelectorAll('input[data-cp]').forEach(function(i){var a=i.dataset.cp.split(':'),p=m.cp[+a[0]],k=a[1];
   i.oninput=function(){if(k==='n'){p.n=i.value;return}var v=parseFloat(i.value),mn=(k==='w'||k==='h'||k==='d')?1:((k==='sg'||k==='sb')?-3000:0),rt=(k==='rx'||k==='ry'||k==='rz');if(isNaN(v)||(rt?(v<-360||v>360):(v<mn||v>6000))){i.className='bad';return}i.className='';p[k]=v;re()};
   i.onchange=function(){if(i.className==='bad'){i.value=p[k];i.className=''}else commit()}});
@@ -2885,9 +2891,9 @@ function cpBind(el,m){
  el.querySelectorAll('[data-cpm]').forEach(function(s){s.onchange=function(){m.cp[+s.dataset.cpm].mt=s.value;commit();all()}});
  el.querySelectorAll('[data-cpk]').forEach(function(s){s.onchange=function(){var p=m.cp[+s.dataset.cpk];if(s.value==='box')delete p.k;else p.k=s.value;if(s.value==='arc'&&p.sg==null)p.sg=-60;cpFix(m);commit();all()}});
  el.querySelectorAll('[data-cpmat]').forEach(function(s){s.onchange=function(){var p=m.cp[+s.dataset.cpmat];if(s.value)p.mat=s.value;else delete p.mat;commit();all()}});
- el.querySelectorAll('[data-cpd]').forEach(function(b){b.onclick=function(){var p=JSON.parse(JSON.stringify(m.cp[+b.dataset.cpd]));p.x+=p.w+2;m.cp.push(p);cpFix(m);commit();all()}});
- el.querySelectorAll('[data-cpx]').forEach(function(b){b.onclick=function(){if(m.cp.length<2){toast('Kamida bitta detal bo‘lishi kerak');return}m.cp.splice(+b.dataset.cpx,1);cpFix(m);commit();all()}});
- $('#cp_add').onclick=function(){if(m.cp.length>=60){toast('Eng ko‘pi bilan 60 ta detal');return}m.cp.push({n:'Detal '+(m.cp.length+1),w:600,h:18,d:400,x:0,y:0,z:0,mt:'body'});cpFix(m);commit();all()}}
+ el.querySelectorAll('[data-cpd]').forEach(function(b){b.onclick=function(){var p=JSON.parse(JSON.stringify(m.cp[+b.dataset.cpd]));p.x+=p.w+2;m.cp.push(p);S.cpMod=m.id;S.cpSel=m.cp.length-1;cpFix(m);commit();all()}});
+ el.querySelectorAll('[data-cpx]').forEach(function(b){b.onclick=function(){if(m.cp.length<2){toast('Kamida bitta detal bo‘lishi kerak');return}m.cp.splice(+b.dataset.cpx,1);S.cpSel=null;cpFix(m);commit();all()}});
+ $('#cp_add').onclick=function(){if(m.cp.length>=60){toast('Eng ko‘pi bilan 60 ta detal');return}m.cp.push({n:'Detal '+(m.cp.length+1),w:600,h:18,d:400,x:0,y:0,z:0,mt:'body'});S.cpMod=m.id;S.cpSel=m.cp.length-1;cpFix(m);commit();all()}}
 var CK={
  'Bo‘sh':function(){return[{n:'Detal 1',w:600,h:18,d:400,x:0,y:0,z:0,mt:'body'}]},
  'Stol':function(){var L=1200,Wd=700,H=750,T=30,l=60,r=[{n:'Stol usti',w:L,h:T,d:Wd,x:0,y:H-T,z:0,mt:'body'}];[[0,0],[L-l,0],[0,Wd-l],[L-l,Wd-l]].forEach(function(q){r.push({n:'Oyoq',w:l,h:H-T,d:l,x:q[0],y:0,z:q[1],mt:'body'})});return r},
