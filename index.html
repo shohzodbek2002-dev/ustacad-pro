@@ -2131,13 +2131,17 @@ function ovStrip(g,G,s0,s1,o0,o1,y0,hgt,mt,name,ox,oz){
  sh.moveTo(A[0][0],A[0][1]);for(i=1;i<=n;i++)sh.lineTo(A[i][0],A[i][1]);for(i=n;i>=0;i--)sh.lineTo(B[i][0],B[i][1]);sh.closePath();
  var geo=new THREE.ExtrudeGeometry(sh,{depth:hgt/1000,bevelEnabled:false});geo.rotateX(-Math.PI/2);
  return ovMesh(g,geo,mt,name,0,y0,0,Math.round(ovLen(G,s0,s1,0))+' × '+Math.round(hgt)+' × '+Math.round(Math.abs(o1-o0))+' (egma)')}
+/* Oval fasad bo‘laklari: ingichka bo‘laklarga qora chegara chiziqlari va o‘z soyasi qo‘yilmaydi (shovqin sababi shu edi) */
+function ovPiece(p,G,a,c,z0,z1,yy,hh,mt,nm,ox,oz,keep){
+ if(c-a<1||hh<1)return null;var o=ovStrip(p,G,a,c,z0,z1,yy,hh,mt,nm,ox,oz);if(!o)return null;o.castShadow=false;
+ if(!keep)o.children.slice().forEach(function(k){if(k.isLineSegments){o.remove(k);if(k.geometry)k.geometry.dispose()}});return o}
 /* Oval mebel: ramkali fasad turlari (alyumin, shisha, shaker, vitrina, to‘r) */
 function ovFrame(p,G,s0,s1,Hh,ft,tp,Fd,hp,m){
  if(!/^(alyumin|shisha|shaker|vitrina|setka|ramkali|frezerovkali|reyka|reyka-gor)$/.test(tp||''))return false;
  function tint(k){var c=Fd.clone();if(c.color)c.color.multiplyScalar(k);return c}
  if(tp==='frezerovkali'||tp==='reyka'||tp==='reyka-gor'){
   var Wd=s1-s0,ax=hp.x,az=hp.z;
-  function sq(a,c,z0,z1,yy,hh,mt,nm){if(c-a<1||hh<1)return;ovStrip(p,G,a,c,z0,z1,yy,hh,mt,nm,ax,az)}
+  function sq(a,c,z0,z1,yy,hh,mt,nm){ovPiece(p,G,a,c,z0,z1,yy,hh,mt,nm,ax,az,false)}
   if(tp==='frezerovkali'){sq(s0,s1,0,ft,2,Hh,Fd,'Eshik');sq(s0+45,s1-45,ft,ft+2,2+45,Hh-90,tint(.85),'Eshik');return true}
   var dk=tint(.7),k,n,st0;sq(s0,s1,0,10,2,Hh,dk,'Eshik');
   if(tp==='reyka'){var W2=Wd-16;n=Math.max(1,Math.floor((W2-24)/40)+1);st0=s0+8+(W2-((n-1)*40+24))/2;for(k=0;k<n;k++)sq(st0+k*40,st0+k*40+24,10,18,10,Hh-16,Fd,'Reyka')}
@@ -2145,10 +2149,10 @@ function ovFrame(p,G,s0,s1,Hh,ft,tp,Fd,hp,m){
   return true}
  var b=fbw(tp),y0=2,W=s1-s0,ih=Hh-2*b,ox=hp.x,oz=hp.z,o=Math.max(b,20);
  var FM=tp==='alyumin'?new THREE.MeshStandardMaterial({color:0xb4b9be,metalness:.35,roughness:.4}):Fd;
- var GL=pbMat('Shisha shaffof')||new THREE.MeshStandardMaterial({color:0x9fd6e6,transparent:true,opacity:.28,roughness:.1});
- function st(a,c,z0,z1,yy,hh,mt,nm){if(c-a<1||hh<1)return;ovStrip(p,G,a,c,z0,z1,yy,hh,mt,nm,ox,oz)}
- st(s0,s1,0,ft,y0,b,FM,'Eshik');st(s0,s1,0,ft,y0+Hh-b,b,FM,'Eshik');
- st(s0,s0+b,0,ft,y0+b,ih,FM,'Eshik');st(s1-b,s1,0,ft,y0+b,ih,FM,'Eshik');
+ var GL=pbMat('Shisha shaffof')||new THREE.MeshStandardMaterial({color:0x9fd6e6,transparent:true,opacity:.28,roughness:.1});if(GL.transparent)GL.depthWrite=false;
+ function st(a,c,z0,z1,yy,hh,mt,nm,k){ovPiece(p,G,a,c,z0,z1,yy,hh,mt,nm,ox,oz,!!k)}
+ var kp=b>=40;st(s0,s1,0,ft,y0,b,FM,'Eshik',kp);st(s0,s1,0,ft,y0+Hh-b,b,FM,'Eshik',kp);
+ st(s0,s0+b,0,ft,y0+b,ih,FM,'Eshik',kp);st(s1-b,s1,0,ft,y0+b,ih,FM,'Eshik',kp);
  var a=s0+b,c=s1-b,yb=y0+b;
  if(tp==='shisha'||tp==='alyumin')st(a,c,ft/2-2,ft/2+2,yb,ih,GL,'Shisha');
  else if(tp==='shaker')st(a,c,3,ft-5,yb,ih,Fd,'Eshik');
@@ -3094,7 +3098,17 @@ var blf=C('Yotoqxona','Karavot ko‘tarma 160×200','Asos ko‘tariladi, ostida 
  kom=P('Yotoqxona','Komod (3 tortma)','Kichik komod','komod',{w:800,h:800,d:450,drawers:3}),
  shk=P('Yotoqxona','Yotoqxona shkafi (3 eshik)','Shtanga va tokchalar','garderob',{w:1500,h:2200,d:600,doors:3,shelves:4,rail:1});
 C('Yotoqxona','Pufik (o‘tirgich)','Yumshoq o‘rindiq, ostida tokcha','Pufik');
+/* Tryumo: old tomoni ichkariga egilgan (botiq) stol usti, 2x2 tortma, o‘rtada egri tokchali o‘yiq, ramkali ko‘zgu */
+function tryumoCP(){var W=1300,H=760,D=450,t=18,pw=340,sg=80,N=26,sw=W/N,r=[],i;
+ function zf(x){var u=(x-W/2)/(W/2);return D-sg*(1-u*u)}
+ for(i=0;i<N;i++)r.push({n:'Stol usti (egri)',w:Math.round(sw+1),h:t,d:Math.round(zf((i+.5)*sw)),x:Math.round(i*sw),y:H-t,z:0,nc:1,col:0xe4e7ec});
+ [0,W-pw].forEach(function(x0){r.push({n:'Yon devor',w:t,h:H-t,d:D,x:x0,y:0,z:0,mt:'body'},{n:'Yon devor',w:t,h:H-t,d:D,x:x0+pw-t,y:0,z:0,mt:'body'},{n:'Tag',w:pw-2*t,h:t,d:D,x:x0+t,y:0,z:0,mt:'body'},{n:'Orqa devor',w:pw-2*t,h:H-2*t-t,d:4,x:x0+t,y:t,z:0,mt:'hdf'});drwsCP(r,x0,pw,H-t,D,2)});
+ r.push({n:'Orqa panel',w:W-2*pw,h:H-2*t,d:t,x:pw,y:t,z:0,mt:'body'});
+ var n2=8,w2=(W-2*pw)/n2;for(i=0;i<n2;i++)r.push({n:'Egri tokcha',w:Math.round(w2+1),h:t,d:Math.round(Math.max(60,zf(pw+(i+.5)*w2)-40)),x:Math.round(pw+i*w2),y:300,z:20,nc:1,col:0xb98d58});
+ r.push({n:'Ko‘zgu ramkasi (chap)',w:50,h:900,d:20,x:130,y:H+10,z:30,mt:'body'},{n:'Ko‘zgu ramkasi (o‘ng)',w:50,h:900,d:20,x:W-180,y:H+10,z:30,mt:'body'},{n:'Ko‘zgu ramkasi (past)',w:W-260,h:50,d:20,x:130,y:H+10,z:30,mt:'body'},{n:'Ko‘zgu ramkasi (tepa)',w:W-260,h:50,d:20,x:130,y:H+860,z:30,mt:'body'},{n:'Ko‘zgu',w:W-360,h:800,d:6,x:180,y:H+60,z:40,mt:'glass'});return r}
+CK['Tryumo (egri stol usti, ko‘zguli)']=tryumoCP;
 C('Yotoqxona','Tualet stoli (ko‘zguli)','Tortmali, ustida katta ko‘zgu','Tualet stoli (ko‘zguli)');
+C('Yotoqxona','Tryumo (egri stol usti, ko‘zguli)','Botiq stol usti, 4 ta tortma, egri tokcha, ramkali ko‘zgu','Tryumo (egri stol usti, ko‘zguli)');
 E('Yotoqxona','Yotoqxona to‘plami','Karavot 160 + 2 tumbochka',{set:[tb2,b160,tb2]});
 E('Yotoqxona','To‘plam: ko‘tarma karavot','Ko‘tarma karavot + 2 tumbochka',{set:[tbe,blf,tbe]});
 E('Yotoqxona','To‘liq yotoqxona','Shkaf, karavot, 2 tumbochka, komod',{set:[shk,tb2,b160,tb2,kom]});
