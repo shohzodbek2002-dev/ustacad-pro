@@ -6928,68 +6928,168 @@ if(typeof module!=='undefined')module.exports=root.B3D;
 })(typeof window!=='undefined'?window:globalThis);
 
 </script>
-<script>
-/* UstaCAD · B3D import paneli (Bazis-Mebelshchik). Faqat o'qish: original fayl o'zgarmaydi. */
+<script>/* B3D edit */
+/* UstaCAD · B3D tahrir mantiqi (DOMsiz, Node'da sinaladi). Detal: {pos,quat,seg(contour),thick,mat,...} */
+(function(root){
+'use strict';
+var B=root.B3D;
+function qmul(a,b){return[a[3]*b[0]+a[0]*b[3]+a[1]*b[2]-a[2]*b[1],a[3]*b[1]-a[0]*b[2]+a[1]*b[3]+a[2]*b[0],a[3]*b[2]+a[0]*b[1]-a[1]*b[0]+a[2]*b[3],a[3]*b[3]-a[0]*b[0]-a[1]*b[1]-a[2]*b[2]]}
+function qaxis(ax,deg){var h=deg*Math.PI/360,s=Math.sin(h),v=[0,0,0];v[ax]=s;return[v[0],v[1],v[2],Math.cos(h)]}
+function qnorm(q){var l=Math.hypot(q[0],q[1],q[2],q[3])||1;return q.map(function(x){return x/l})}
+function recompute(p){
+  if(!p.contour||!p.contour.ok)return p;var xs=[],ys=[];
+  p.contour.seg.forEach(function(s){xs.push(s[0],s[2]);ys.push(s[1],s[3])});
+  p.minx=Math.min.apply(0,xs);p.maxx=Math.max.apply(0,xs);p.miny=Math.min.apply(0,ys);p.maxy=Math.max.apply(0,ys);
+  p.sx=p.maxx-p.minx;p.sy=p.maxy-p.miny;p.L=Math.max(p.sx,p.sy);p.Wd=Math.min(p.sx,p.sy);return p}
+function center(p){return B.qrot(p.quat,[(p.minx+p.maxx)/2,(p.miny+p.maxy)/2,p.thick/2]).map(function(v,i){return v+p.pos[i]})}
+function move(p,dx,dy,dz){p.pos=[p.pos[0]+dx,p.pos[1]+dy,p.pos[2]+dz];return p}
+function rotate(p,ax,deg){ /* dunyo o'qi (0=X,1=Y,2=Z) atrofida, detal markazi qo'zg'almaydi */
+  var c=center(p),q=qnorm(qmul(qaxis(ax,deg),p.quat)),lc=[(p.minx+p.maxx)/2,(p.miny+p.maxy)/2,p.thick/2],r=B.qrot(q,lc);
+  p.quat=q;p.pos=[c[0]-r[0],c[1]-r[1],c[2]-r[2]];return p}
+function resize(p,nx,ny){ /* lokal X va Y o'lchami; chap-past burchak (minx,miny) joyida qoladi */
+  if(!(nx>0&&ny>0&&isFinite(nx)&&isFinite(ny)))throw new Error('O\'lcham musbat son bo\'lishi kerak');
+  if(!p.contour||!p.contour.ok)throw new Error('Kontur tasdiqlanmagan — o\'lchamni o\'zgartirib bo\'lmaydi');
+  var kx=nx/p.sx,ky=ny/p.sy,x0=p.minx,y0=p.miny;
+  p.contour={ok:true,seg:p.contour.seg.map(function(s){return[x0+(s[0]-x0)*kx,y0+(s[1]-y0)*ky,x0+(s[2]-x0)*kx,y0+(s[3]-y0)*ky]})};
+  return recompute(p)}
+function setThick(p,t){if(!(t>0&&t<=200&&isFinite(t)))throw new Error('Qalinlik 0 dan katta va 200 mm dan kichik bo\'lishi kerak');p.thick=t;return p}
+var UID=1000;
+function clone(p,off){var c=JSON.parse(JSON.stringify(p));c.uid=++UID;c.copyOf=p.uid;c.name=p.name+' (nusxa)';c.pos=[p.pos[0]+(off||50),p.pos[1],p.pos[2]];return c}
+function validate(parts,frame){var E=[],W=[];
+  parts.forEach(function(p,i){var t='"'+p.name+'" ('+p.code+')';
+    if(!p.contour||!p.contour.ok){W.push(t+': kontur tasdiqlanmagan, 3D da ko\'rsatilmaydi');return}
+    var bad=[].concat(p.pos,p.quat,[p.thick,p.L,p.Wd]).some(function(v){return typeof v!=='number'||!isFinite(v)});
+    if(bad){E.push(t+': NaN yoki cheksiz qiymat');return}
+    if(p.L<=0||p.Wd<=0)E.push(t+': nol o\'lcham');
+    if(p.thick<=0)E.push(t+': qalinlik nol');
+    var s=p.contour.seg,n=s.length,open=false;
+    for(var k=0;k<n;k++){var a=s[k],b=s[(k+1)%n];if(Math.hypot(a[2]-b[0],a[3]-b[1])>0.01)open=true}
+    if(open)E.push(t+': kontur yopiq emas');
+    var ql=Math.hypot.apply(0,p.quat);if(Math.abs(ql-1)>0.01)W.push(t+': aylanish kvaternioni normallanmagan ('+ql.toFixed(3)+')')});
+  if(frame){var bb=B.bbox(parts.filter(function(p){return p.contour&&p.contour.ok}));
+    [['X',0,frame.w],['Y',1,frame.h],['Z',2,frame.d]].forEach(function(a){if(Math.abs(bb.size[a[1]]-a[2])>1)W.push('Umumiy '+a[0]+' o\'lcham '+bb.size[a[1]].toFixed(1)+' mm, fayldagi gabarit ramka '+a[2].toFixed(1)+' mm (tahrir natijasi bo\'lishi mumkin)')})}
+  return{errors:E,warnings:W}}
+root.B3DEdit={recompute:recompute,center:center,move:move,rotate:rotate,resize:resize,setThick:setThick,clone:clone,validate:validate,qmul:qmul};
+if(typeof module!=='undefined')module.exports=root.B3DEdit;
+})(typeof window!=='undefined'?window:globalThis);
+
+</script>
+<script>/* B3D UI */
+/* UstaCAD · B3D import va 3D tahrirlash paneli (Bazis-Mebelshchik). Original fayl o'zgarmaydi. */
 (function(){
-var B=window.B3D;if(!B)return;
+var B=window.B3D,E=window.B3DEdit;if(!B||!E)return;
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function fx(n){return(Math.round(n*10)/10).toString()}
 function save(name,data,mime){var b=new Blob([data],{type:mime}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},500)}
 function groups(P){var m={};P.forEach(function(p){var k=[p.code,p.name,p.mat,fx(p.L||0),fx(p.Wd||0),fx(p.thick)].join('|');(m[k]=m[k]||{p:p,n:0}).n++});return Object.keys(m).map(function(k){return m[k]})}
-function csv(r){var rows=[['Kod','Nomi','Soni','Uzunlik mm','Eni mm','Qalinlik mm','Material','Tekstura yo\'nalishi']];
-  groups(r.parts).forEach(function(g){var p=g.p;rows.push([p.code,p.name,g.n,fx(p.L||0),fx(p.Wd||0),fx(p.thick),p.mat,p.texDir])});
+function csv(P){var rows=[['Kod','Nomi','Soni','Uzunlik mm','Eni mm','Qalinlik mm','Material']];
+  groups(P).forEach(function(g){var p=g.p;rows.push([p.code,p.name,g.n,fx(p.L||0),fx(p.Wd||0),fx(p.thick),p.mat])});
   return '\ufeff'+rows.map(function(x){return x.map(function(c){c=String(c);return /[;"\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c}).join(';')}).join('\r\n')}
-function colorOf(p){var m=(p.mat||'').toLowerCase();if(m.indexOf('бежев')>=0)return 0xd9c7a1;if(m.indexOf('бел')>=0)return 0xf2f2f0;if(m.indexOf('венге')>=0)return 0x3a2a22;if(m.indexOf('дуб')>=0)return 0xc9a46a;
-  var h=0;for(var i=0;i<m.length;i++)h=(h*31+m.charCodeAt(i))|0;return 0x808080+((h&0x3f3f3f))}
+function autoColor(p){var m=(p.mat||'').toLowerCase();if(m.indexOf('бежев')>=0)return 0xd9c7a1;if(m.indexOf('бел')>=0)return 0xf2f2f0;if(m.indexOf('венге')>=0)return 0x3a2a22;if(m.indexOf('дуб')>=0)return 0xc9a46a;
+  var h=0;for(var i=0;i<m.length;i++)h=(h*31+m.charCodeAt(i))|0;return 0x808080+(h&0x3f3f3f)}
+function hex(n){return '#'+('000000'+(n>>>0).toString(16)).slice(-6)}
+var BS="padding:7px 9px;margin:2px";
+
 function show(r,fname){
+  var parts=JSON.parse(JSON.stringify(r.parts)),uid=1;parts.forEach(function(p){p.uid=uid++;E.recompute(p)});
+  var orig=JSON.stringify(parts),undo=[],sel=null,meshes={},raf=0,ren=null,rs=null,ctl=null;
   var ov=document.createElement('div');ov.id='b3d_ov';
   ov.style.cssText='position:fixed;left:0;top:0;right:0;bottom:0;height:100dvh;z-index:99990;background:#14110d;color:#efe9df;display:flex;flex-direction:column;font:14px system-ui,-apple-system,sans-serif';
-  var bb=B.bbox(r.parts),sz=bb.size.map(fx),fr=r.frame,G=groups(r.parts);
-  var chk=fr?(Math.abs(bb.size[0]-fr.w)<1&&Math.abs(bb.size[1]-fr.h)<1&&Math.abs(bb.size[2]-fr.d)<1?'✓ detallar umumiy o\'lchami gabarit ramkaga mos ('+fx(fr.w)+'×'+fx(fr.h)+'×'+fx(fr.d)+')':'⚠ detallar o\'lchami ('+sz.join('×')+') gabarit ramkadan ('+fx(fr.w)+'×'+fx(fr.h)+'×'+fx(fr.d)+') farq qiladi'):'gabarit ramka topilmadi';
-  ov.innerHTML="<div style='display:flex;gap:8px;align-items:center;padding:calc(env(safe-area-inset-top,0px) + 8px) 10px 8px;background:#201d18;border-bottom:1px solid #38332b'><button id='b3_x' style='padding:8px 12px'>✕</button><b style='flex:1;font-size:15px'>B3D import · "+esc(fname)+"</b></div>"+
-  "<div id='b3_cv' style='flex:1 1 45%;min-height:180px;position:relative;touch-action:none'></div>"+
-  "<div style='flex:1 1 55%;overflow:auto;padding:8px 10px calc(env(safe-area-inset-bottom,0px) + 10px);background:#201d18;border-top:1px solid #38332b'>"+
-  "<div style='font-size:12px;color:#c9c0b0;line-height:1.5'>Format: Bazis "+r.magic+" · hujjat v"+esc(r.docVersion)+" · "+r.parts.length+" ta detal ("+G.length+" xil) · "+chk+"<br>Model hajmi: "+sz.join(' × ')+" mm"+(r.warnings.length?"<br><span style='color:#f0b060'>⚠ "+r.warnings.map(esc).join('<br>⚠ ')+"</span>":"")+"</div>"+
-  "<div style='display:flex;gap:6px;flex-wrap:wrap;margin:8px 0'><button id='b3_csv'>CSV ro'yxat</button><button id='b3_json'>JSON (tahlil)</button></div>"+
-  "<table style='width:100%;border-collapse:collapse;font-size:12px'><tr style='color:#9a9285;text-align:left'><th>Kod</th><th>Nomi</th><th>Soni</th><th>L×E×Q mm</th><th>Material</th></tr>"+
-  G.map(function(g){var p=g.p;return "<tr style='border-top:1px solid #38332b'><td>"+esc(p.code)+"</td><td>"+esc(p.name)+"</td><td>"+g.n+"</td><td>"+fx(p.L||0)+'×'+fx(p.Wd||0)+'×'+fx(p.thick)+"</td><td>"+esc(p.mat)+"</td></tr>"}).join('')+"</table>"+
-  "<p style='font-size:11px;color:#9a9285;margin:8px 0 0'>Teshiklar/prisadka (Opers) va .b3d'ga eksport hali yo'q: format bu bo'limlari tasdiqlanmagan.</p></div>";
+  ov.innerHTML="<div style='display:flex;gap:8px;align-items:center;padding:calc(env(safe-area-inset-top,0px) + 8px) 10px 8px;background:#201d18;border-bottom:1px solid #38332b'><button id='b3_x' style='padding:8px 12px'>✕</button><b style='flex:1;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'>B3D · "+esc(fname)+"</b></div>"+
+   "<div id='b3_cv' style='flex:1 1 40%;min-height:170px;position:relative;touch-action:none'><div style='position:absolute;right:6px;top:6px;z-index:2;display:flex;gap:4px'><button data-v='3d'>3D</button><button data-v='front'>Old</button><button data-v='side'>Yon</button><button data-v='top'>Tepa</button></div></div>"+
+   "<div id='b3_pn' style='flex:1 1 60%;overflow:auto;padding:8px 10px calc(env(safe-area-inset-bottom,0px) + 10px);background:#201d18;border-top:1px solid #38332b'></div>";
   document.body.appendChild(ov);
-  var cv=ov.querySelector('#b3_cv'),ren;
-  try{ren=new THREE.WebGLRenderer({antialias:true});}catch(e){cv.innerHTML='<p style="padding:12px">WebGL ishlamayapti</p>';ren=null}
-  var raf=0,ctl;
-  if(ren){ren.setPixelRatio(Math.min(devicePixelRatio||1,2));ren.setClearColor(0x14110d);ren.domElement.style.cssText='display:block;width:100%;height:100%';cv.appendChild(ren.domElement);
-    var sc=new THREE.Scene(),cam=new THREE.PerspectiveCamera(40,1,1,50000);sc.add(new THREE.AmbientLight(0xffffff,.7));var dl=new THREE.DirectionalLight(0xffffff,.8);dl.position.set(600,1200,900);sc.add(dl);
-    var grp=new THREE.Group();
-    r.parts.forEach(function(p){if(!p.contour||!p.contour.ok)return;
-      var pts=p.contour.seg.map(function(s){return new THREE.Vector2(s[0],s[1])}),sh=new THREE.Shape(pts);
-      var g=new THREE.ExtrudeGeometry(sh,{depth:p.thick,bevelEnabled:false}),m=new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:colorOf(p),roughness:.8,metalness:0,side:THREE.DoubleSide}));
-      m.add(new THREE.LineSegments(new THREE.EdgesGeometry(g),new THREE.LineBasicMaterial({color:0x3a3228})));
-      m.quaternion.set(p.quat[0],p.quat[1],p.quat[2],p.quat[3]);m.position.set(p.pos[0],p.pos[1],p.pos[2]);grp.add(m)});
-    /* modelni avtomatik markazlash */
-    grp.position.set(-(bb.min[0]+bb.max[0])/2,-(bb.min[1]+bb.max[1])/2,-(bb.min[2]+bb.max[2])/2);var wr=new THREE.Group();wr.add(grp);sc.add(wr);
-    var R=Math.max(bb.size[0],bb.size[1],bb.size[2])||1000;cam.position.set(R*1.1,R*.8,R*1.6);
-    if(THREE.OrbitControls){ctl=new THREE.OrbitControls(cam,ren.domElement);ctl.enableDamping=true}
-    function rs(){var w=cv.clientWidth||300,h=cv.clientHeight||200;ren.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}
-    rs();window.addEventListener('resize',rs);
-    (function loop(){raf=requestAnimationFrame(loop);if(ctl)ctl.update();ren.render(sc,cam)})();
-  }
-  function close(){cancelAnimationFrame(raf);window.removeEventListener('resize',rs);if(ren){ren.dispose()}ov.remove()}
-  ov.querySelector('#b3_x').onclick=close;
-  ov.querySelector('#b3_csv').onclick=function(){save(fname.replace(/\.b3d$/i,'')+'-detallar.csv',csv(r),'text/csv')};
-  ov.querySelector('#b3_json').onclick=function(){save(fname.replace(/\.b3d$/i,'')+'-b3d.json',JSON.stringify({manba:fname,format:r.magic,versiya:r.docVersion,gabarit:r.frame,hajm:bb.size,detallar:r.parts.map(function(p){return{kod:p.code,nomi:p.name,uzunlik:p.L,eni:p.Wd,qalinlik:p.thick,material:p.mat,x:p.pos,kvaternion:p.quat,kontur:p.contour.ok?p.contour.seg:null}}),ogohlantirish:r.warnings},null,1),'application/json')};
-}
-function pick(){var i=document.getElementById('b3d_file');i.value='';i.click()}
+  var cv=ov.querySelector('#b3_cv'),pn=ov.querySelector('#b3_pn');
+  var sc,cam,grp,wr,R=1000,ray,mouse,selBox=null,off=[0,0,0];
+  function snap(){undo.push(JSON.stringify(parts));if(undo.length>60)undo.shift()}
+  function colOf(p){return p.colorOverride!=null?p.colorOverride:autoColor(p)}
+  function build(p){
+    if(meshes[p.uid]){grp.remove(meshes[p.uid]);meshes[p.uid].traverse(function(o){if(o.geometry)o.geometry.dispose()});delete meshes[p.uid]}
+    if(!p.contour||!p.contour.ok)return;
+    var sh=new THREE.Shape(p.contour.seg.map(function(s){return new THREE.Vector2(s[0],s[1])})),g=new THREE.ExtrudeGeometry(sh,{depth:p.thick,bevelEnabled:false}),
+      m=new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:colOf(p),roughness:.8,metalness:0,side:THREE.DoubleSide,emissive:sel===p.uid?0x2a5a9a:0x000000}));
+    m.add(new THREE.LineSegments(new THREE.EdgesGeometry(g),new THREE.LineBasicMaterial({color:sel===p.uid?0x66b3ff:0x3a3228})));
+    m.userData.uid=p.uid;m.quaternion.set(p.quat[0],p.quat[1],p.quat[2],p.quat[3]);m.position.set(p.pos[0],p.pos[1],p.pos[2]);grp.add(m);meshes[p.uid]=m}
+  function buildAll(){Object.keys(meshes).forEach(function(k){grp.remove(meshes[k]);meshes[k].traverse(function(o){if(o.geometry)o.geometry.dispose()})});meshes={};parts.forEach(build)}
+  function byId(i){for(var k=0;k<parts.length;k++)if(parts[k].uid===i)return parts[k];return null}
+  function setup3D(){
+    try{ren=new THREE.WebGLRenderer({antialias:true})}catch(e){ren=null}
+    if(!ren){cv.insertAdjacentHTML('beforeend','<p style="padding:12px">WebGL ishlamayapti: 3D ko\'rinish yo\'q, jadval va tahrir ishlaydi.</p>');return}
+    ren.setPixelRatio(Math.min(devicePixelRatio||1,2));ren.setClearColor(0x14110d);ren.domElement.style.cssText='display:block;width:100%;height:100%';cv.appendChild(ren.domElement);
+    sc=new THREE.Scene();cam=new THREE.PerspectiveCamera(40,1,1,50000);sc.add(new THREE.AmbientLight(0xffffff,.7));var dl=new THREE.DirectionalLight(0xffffff,.8);dl.position.set(600,1200,900);sc.add(dl);
+    grp=new THREE.Group();wr=new THREE.Group();wr.add(grp);sc.add(wr);
+    var bb=B.bbox(parts.filter(function(p){return p.contour&&p.contour.ok}));off=[-(bb.min[0]+bb.max[0])/2,-(bb.min[1]+bb.max[1])/2,-(bb.min[2]+bb.max[2])/2];grp.position.set(off[0],off[1],off[2]);
+    R=Math.max(bb.size[0],bb.size[1],bb.size[2])||1000;view('3d');
+    if(THREE.OrbitControls){ctl=new THREE.OrbitControls(cam,ren.domElement);ctl.enableDamping=true;ctl.screenSpacePanning=true}
+    ray=new THREE.Raycaster();var dn=null;
+    ren.domElement.addEventListener('pointerdown',function(e){dn=[e.clientX,e.clientY]});
+    ren.domElement.addEventListener('pointerup',function(e){if(!dn||Math.hypot(e.clientX-dn[0],e.clientY-dn[1])>5)return;dn=null;
+      var rc=ren.domElement.getBoundingClientRect(),v=new THREE.Vector2((e.clientX-rc.left)/rc.width*2-1,-((e.clientY-rc.top)/rc.height*2-1));ray.setFromCamera(v,cam);
+      var hit=ray.intersectObjects(grp.children,false)[0];pick(hit?hit.object.userData.uid:null)});
+    rs=function(){var w=cv.clientWidth||300,h=cv.clientHeight||200;ren.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()};rs();window.addEventListener('resize',rs);
+    buildAll();(function loop(){raf=requestAnimationFrame(loop);if(ctl)ctl.update();ren.render(sc,cam)})()}
+  function view(v){if(!cam)return;var d=R*1.9,P={'3d':[R*1.1,R*.8,R*1.6],front:[0,0,d],side:[d,0,0],top:[0,d,.001]}[v];cam.position.set(P[0],P[1],P[2]);cam.lookAt(0,0,0);if(ctl){ctl.target.set(0,0,0);ctl.update()}}
+  cv.querySelectorAll('[data-v]').forEach(function(b){b.onclick=function(){view(b.getAttribute('data-v'))}});
+  function pick(id){var prev=sel;sel=id;if(prev!=null&&byId(prev))build(byId(prev));if(id!=null)build(byId(id));render()}
+  function num(el){var v=parseFloat(String(el.value).replace(',','.'));return v}
+  function act(fn){var p=byId(sel);if(!p)return;snap();try{fn(p);build(p);render()}catch(e){undo.pop();toast(e.message);render()}}
+  function render(){
+    var P3=parts.filter(function(p){return p.contour&&p.contour.ok}),bb=P3.length?B.bbox(P3).size:[0,0,0],v=E.validate(parts,r.frame),p=byId(sel),h='';
+    h+="<div style='font-size:12px;color:#c9c0b0;line-height:1.5'>Bazis "+r.magic+" · v"+esc(r.docVersion)+" · "+parts.length+" ta detal · hajm "+bb.map(fx).join(' × ')+" mm"+(undo.length?" · <b style='color:#9ad'>tahrirlangan ("+undo.length+")</b>":"")+"</div>";
+    if(v.errors.length)h+="<div style='font-size:12px;color:#ff8a8a'>❌ "+v.errors.map(esc).join('<br>❌ ')+"</div>";
+    var w=r.warnings.concat(v.warnings);if(w.length)h+="<div style='font-size:12px;color:#f0b060'>⚠ "+w.map(esc).join('<br>⚠ ')+"</div>";
+    h+="<div style='margin:6px 0'><button id='e_un' style='"+BS+"'>↶ Bekor qilish</button><button id='e_rs' style='"+BS+"'>Asl holat</button><button id='e_csv' style='"+BS+"'>CSV</button><button id='e_js' style='"+BS+"'>JSON</button></div>";
+    if(p){var c=E.center(p);
+      h+="<div style='border:1px solid #38332b;border-radius:8px;padding:8px;margin-bottom:8px'><b>"+esc(p.name)+"</b> <span style='color:#9a9285'>"+esc(p.code)+"</span>"+
+      "<div style='display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px'>"+
+      "<label>Nomi<input id='f_nm' value='"+esc(p.name)+"' style='width:100%'></label><label>Material<input id='f_mt' value='"+esc(p.mat)+"' style='width:100%'></label>"+
+      "<label>Rang<input id='f_cl' type='color' value='"+hex(colOf(p))+"' style='width:100%;height:34px'></label><label>Qalinlik mm<input id='f_th' type='number' step='any' value='"+fx(p.thick)+"' style='width:100%'></label>"+
+      "<label>Uzunlik (lokal X) mm<input id='f_sx' type='number' step='any' value='"+fx(p.sx)+"' style='width:100%'></label><label>Eni (lokal Y) mm<input id='f_sy' type='number' step='any' value='"+fx(p.sy)+"' style='width:100%'></label>"+
+      ['X','Y','Z'].map(function(a,i){return "<label>Joy "+a+" mm<input class='f_ps' data-i='"+i+"' type='number' step='any' value='"+fx(p.pos[i])+"' style='width:100%'></label>"}).join('')+"</div>"+
+      "<div style='margin-top:6px;font-size:12px;color:#9a9285'>Surish qadami <select id='f_st'><option>1</option><option selected>10</option><option>50</option><option>100</option></select> mm</div>"+
+      ['X','Y','Z'].map(function(a,i){return "<button class='mv' data-a='"+i+"' data-s='-1' style='"+BS+"'>−"+a+"</button><button class='mv' data-a='"+i+"' data-s='1' style='"+BS+"'>+"+a+"</button>"}).join('')+
+      "<div style='margin-top:4px'>Aylantirish: "+['X','Y','Z'].map(function(a,i){return "<button class='rt' data-a='"+i+"' data-d='-90' style='"+BS+"'>"+a+" −90°</button><button class='rt' data-a='"+i+"' data-d='90' style='"+BS+"'>"+a+" +90°</button>"}).join('')+
+      "<br>Burchak <input id='f_ag' type='number' value='15' style='width:70px'>° <select id='f_ax'><option value='0'>X</option><option value='1' selected>Y</option><option value='2'>Z</option></select> <button id='f_rg' style='"+BS+"'>Aylantir</button></div>"+
+      "<div style='margin-top:4px'><button id='e_cp' style='"+BS+"'>⧉ Nusxalash</button><button id='e_dl' style='"+BS+";color:#ff8a8a'>🗑 O'chirish</button><button id='e_cl' style='"+BS+"'>Rangni asliga</button></div>"+
+      "<div style='font-size:12px;color:#9a9285;margin-top:6px'>Markaz: "+c.map(fx).join(', ')+" · aylanish (kvaternion): "+p.quat.map(function(x){return (Math.round(x*1000)/1000)}).join(', ')+"<br>Teshik/prisadka: "+(p.hasParams?"detalda qo'shimcha parametrlar bor, lekin ular hali dekodlanmagan":"bu detalda teshik ma'lumoti yo'q")+(r.unknownOps?" (faylda umumiy 'Opers' bloklari bor, o'qilmagan)":"")+"</div></div>"}
+    else h+="<div style='font-size:12px;color:#9a9285;margin:4px 0'>Detalni 3D da yoki ro'yxatda bosib tanlang.</div>";
+    h+="<table style='width:100%;border-collapse:collapse;font-size:12px'><tr style='color:#9a9285;text-align:left'><th>Kod</th><th>Nomi</th><th>L×E×Q</th><th>Material</th></tr>"+
+      parts.map(function(q){return "<tr data-u='"+q.uid+"' style='border-top:1px solid #38332b;cursor:pointer;"+(q.uid===sel?"background:#243a55":"")+"'><td>"+esc(q.code)+"</td><td>"+esc(q.name)+"</td><td>"+fx(q.L||0)+'×'+fx(q.Wd||0)+'×'+fx(q.thick)+"</td><td>"+esc(q.mat)+"</td></tr>"}).join('')+"</table>"+
+      "<p style='font-size:11px;color:#9a9285;margin:8px 0 0'>Eksport .b3d hali yo'q (format yozilishi tasdiqlanmagan). Tahrirlar shu panelda; UstaCAD asosiy modeliga hali uzatilmagan.</p>";
+    var st=pn.scrollTop;pn.innerHTML=h;pn.scrollTop=st;wire()}
+  function wire(){
+    var $q=function(s){return pn.querySelector(s)};
+    pn.querySelectorAll('tr[data-u]').forEach(function(t){t.onclick=function(){pick(+t.getAttribute('data-u'))}});
+    $q('#e_un').onclick=function(){if(!undo.length)return toast('Bekor qiladigan amal yo\'q');var s=undo.pop();parts=JSON.parse(s);if(byId(sel)==null)sel=null;buildAll();render()};
+    $q('#e_rs').onclick=function(){if(!undo.length&&JSON.stringify(parts)===orig)return;snap();parts=JSON.parse(orig);sel=null;buildAll();render()};
+    $q('#e_csv').onclick=function(){save(fname.replace(/\.b3d$/i,'')+'-detallar.csv',csv(parts),'text/csv')};
+    $q('#e_js').onclick=function(){save(fname.replace(/\.b3d$/i,'')+'-tahrirlangan.json',JSON.stringify({manba:fname,format:r.magic,versiya:r.docVersion,gabarit:r.frame,detallar:parts.map(function(p){return{kod:p.code,nomi:p.name,uzunlik:p.L,eni:p.Wd,qalinlik:p.thick,material:p.mat,rang:p.colorOverride!=null?hex(p.colorOverride):null,joy:p.pos,kvaternion:p.quat,kontur:p.contour.ok?p.contour.seg:null}})},null,1),'application/json')};
+    if(!byId(sel))return;
+    $q('#f_nm').onchange=function(){var v=this.value;act(function(p){p.name=v})};
+    $q('#f_mt').onchange=function(){var v=this.value;act(function(p){p.mat=v})};
+    $q('#f_cl').onchange=function(){var v=parseInt(this.value.slice(1),16);act(function(p){p.colorOverride=v})};
+    $q('#e_cl').onclick=function(){act(function(p){p.colorOverride=null})};
+    $q('#f_th').onchange=function(){var v=num(this);act(function(p){E.setThick(p,v)})};
+    $q('#f_sx').onchange=function(){var v=num(this);act(function(p){E.resize(p,v,p.sy)})};
+    $q('#f_sy').onchange=function(){var v=num(this);act(function(p){E.resize(p,p.sx,v)})};
+    pn.querySelectorAll('.f_ps').forEach(function(el){el.onchange=function(){var i=+el.getAttribute('data-i'),v=num(el);act(function(p){if(!isFinite(v))throw new Error('Son kiriting');var d=[0,0,0];d[i]=v-p.pos[i];E.move(p,d[0],d[1],d[2])})}});
+    pn.querySelectorAll('.mv').forEach(function(b){b.onclick=function(){var s=+$q('#f_st').value*+b.getAttribute('data-s'),i=+b.getAttribute('data-a');act(function(p){var d=[0,0,0];d[i]=s;E.move(p,d[0],d[1],d[2])})}});
+    pn.querySelectorAll('.rt').forEach(function(b){b.onclick=function(){var i=+b.getAttribute('data-a'),d=+b.getAttribute('data-d');act(function(p){E.rotate(p,i,d)})}});
+    $q('#f_rg').onclick=function(){var d=num($q('#f_ag')),i=+$q('#f_ax').value;act(function(p){if(!isFinite(d))throw new Error('Burchakni kiriting');E.rotate(p,i,d)})};
+    $q('#e_cp').onclick=function(){var p=byId(sel);snap();var c=E.clone(p,50);c.uid=++uid;parts.push(c);var prev=sel;sel=c.uid;build(byId(prev));build(c);render()};
+    $q('#e_dl').onclick=function(){var p=byId(sel);if(!confirm('"'+p.name+'" detali o\'chirilsinmi? (Bekor qilish tugmasi bilan qaytarish mumkin)'))return;snap();parts=parts.filter(function(x){return x.uid!==sel});if(meshes[sel]){grp.remove(meshes[sel]);delete meshes[sel]}sel=null;render()}}
+  ov.querySelector('#b3_x').onclick=function(){if(undo.length&&!confirm('Tahrirlar saqlanmagan (CSV/JSON ga yuklab oling). Yopilsinmi?'))return;cancelAnimationFrame(raf);if(rs)window.removeEventListener('resize',rs);if(ren)ren.dispose();ov.remove()};
+  setup3D();render()}
 function init(){
   if(document.getElementById('b3d_btn'))return;var host=document.getElementById('x_imp');if(!host)return;
   var b=document.createElement('button');b.id='b3d_btn';b.textContent='B3D import (Bazis)';host.parentNode.insertBefore(b,host.nextSibling);
   var f=document.createElement('input');f.type='file';f.id='b3d_file';f.accept='.b3d';f.style.display='none';host.parentNode.parentNode.appendChild(f);
-  b.onclick=pick;
+  b.onclick=function(){f.value='';f.click()};
   f.onchange=function(){var fl=f.files[0];if(!fl)return;
     if(fl.size>60*1024*1024){return toast('Fayl juda katta (60 MB dan oshmasin)')}
     var rd=new FileReader();rd.onload=function(){try{var r=B.parse(new Uint8Array(rd.result));if(!r.parts.length)throw new Error('Faylda detal topilmadi');show(r,fl.name)}catch(e){toast('B3D import xatosi: '+e.message)}};
-    rd.onerror=function(){toast('Faylni o\'qib bo\'lmadi')};rd.readAsArrayBuffer(fl)};
-}
+    rd.onerror=function(){toast('Faylni o\'qib bo\'lmadi')};rd.readAsArrayBuffer(fl)}}
+var uid=0;
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 setTimeout(init,1500);
 })();
