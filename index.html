@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="uz"><head><meta charset="utf-8">
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+<link rel="preconnect" href="https://ustacad-server.onrender.com" crossorigin><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-192.png">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>UstaCAD 5.8 PRO — Mebel konstruktori</title>
@@ -24,6 +24,12 @@ window.USTACAD_TG={
  PRO_CONTACT:"@xonqooo",
  PRO_PRICE:"99 000 so'm / oy"
 };
+</script>
+<script>
+/* Server uyg'otish: Render bepul tarifda uxlab qoladi; birinchi "Yuborish" sekin bo'lmasligi uchun sahifa ochilganda bir marta uyg'otamiz */
+(function(){try{var T=window.USTACAD_TG;if(!T||!T.UPLOAD_URL||!/^https:/.test(T.UPLOAD_URL))return;var u=T.UPLOAD_URL.replace(/\/telegram\/?$/,'/');
+var go=function(){try{var c=window.AbortController?new AbortController():null;if(c)setTimeout(function(){c.abort()},15000);fetch(u,{method:'GET',mode:'no-cors',cache:'no-store',signal:c?c.signal:undefined}).catch(function(){})}catch(e){}};
+if(window.requestIdleCallback)requestIdleCallback(go,{timeout:3000});else setTimeout(go,1500)}catch(e){}})();
 </script>
 <style>
 :root{--bg:#f1eee8;--pn:#fff;--tx:#1d1b18;--mt:#6d675e;--ac:#b4682a;--ac2:#c97a3a;--bd:#ddd6ca;--in:#f6f3ee;--sh:0 1px 2px rgba(40,30,20,.06),0 4px 14px rgba(40,30,20,.06);--r:10px;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -258,11 +264,11 @@ window.addEventListener('load',function(){
 <div id="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/environments/RoomEnvironment.js" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js" crossorigin="anonymous"></script>
 <script>
 /* ===== UstaCAD Fasad chizish: geometriya, DXF, G-kod (UI dan alohida) ===== */
 var FDC=(function(){
