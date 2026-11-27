@@ -21,8 +21,8 @@ window.USTACAD_TG={
  /* Pro tarif: bepul fayllar (loyiha PNG/JSON/PDF, taklif) ochiq, qolganlari (raskroy, DXF, Excel, yorliq, CNC...) faqat Pro.
     PRO_ENABLED:false = qulf butunlay o'chiq. PRO_CONTACT = to'lov uchun aloqa (@username). Pro ro'yxati serverda: PRO_IDS */
  PRO_ENABLED:true,
- PRO_CONTACT:"",
- PRO_PRICE:""
+ PRO_CONTACT:"@xonqooo",
+ PRO_PRICE:"99 000 so'm / oy"
 };
 </script>
 <style>
@@ -6109,5 +6109,52 @@ window.__r3api={apply:R.post,modes:MODES,mode:mode};
 /* Oflayn rejim (PWA): sw.js va manifest.webmanifest shu fayl bilan bir papkada bo‘lsa ishlaydi; bo‘lmasa jim o‘tadi */
 (function(){try{if(!('serviceWorker' in navigator)||!/^https?:$/.test(location.protocol))return;
  window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}catch(e){}})();
+</script>
+<script>
+/* UstaCAD: panelni tartibga solish (bo'limlarni guruhlash, qidiruv) va serverni uyg'otish */
+(function(){
+ var st=document.createElement('style');
+ st.textContent='details details{box-shadow:none;background:var(--in);margin:8px 0}#ps_q{margin-bottom:10px}';
+ document.head.appendChild(st);
+ var GROUPS=[
+  ['⚙ CNC va prisadka',/cnc|stanok|prisadka jadvali/i],
+  ['🔩 Furnitura',/^\s*furnitura/i],
+  ['📐 Shablonlar',/shablon|tayyor oshxona yaratgich/i],
+  ['👤 Mijoz bilan ishlash',/mijozga|bulut/i],
+  ['➕ Qo‘shimcha',/instagram|eshik videolari|ai rang/i]];
+ function sumText(d){var s=d.querySelector(':scope>summary');return s?s.textContent:''}
+ function group(){
+  var aside=document.querySelector('aside');if(!aside)return;
+  GROUPS.forEach(function(g){
+   if(aside.querySelector('details[data-grp="'+g[0]+'"]'))return;
+   var items=[].filter.call(aside.children,function(d){return d.tagName==='DETAILS'&&!d.dataset.grp&&g[1].test(sumText(d))});
+   if(items.length<2)return;
+   var w=document.createElement('details');w.dataset.grp=g[0];
+   var s=document.createElement('summary');s.textContent=g[0];w.appendChild(s);
+   aside.insertBefore(w,items[0]);
+   items.forEach(function(d){d.open=false;w.appendChild(d)})});
+ }
+ function search(){
+  var aside=document.querySelector('aside');if(!aside||document.getElementById('ps_q'))return;
+  var q=document.createElement('input');q.id='ps_q';q.type='search';q.placeholder='🔍 Bo‘lim qidirish (masalan: kromka, CNC, narx)';
+  aside.insertBefore(q,aside.firstChild);
+  q.addEventListener('input',function(){
+   var v=q.value.trim().toLowerCase();
+   [].forEach.call(aside.children,function(d){
+    if(d.tagName!=='DETAILS')return;
+    if(!v){d.style.display='';[].forEach.call(d.querySelectorAll('details'),function(x){x.style.display=''});return}
+    var subs=[].slice.call(d.querySelectorAll('details')),hit=sumText(d).toLowerCase().indexOf(v)>=0,any=false;
+    subs.forEach(function(x){var m=sumText(x).toLowerCase().indexOf(v)>=0;x.style.display=(m||hit)?'':'none';if(m)any=true});
+    d.style.display=(hit||any)?'':'none';if(hit||any)d.open=true})});
+ }
+ /* ichki bo'lim ochilsa, uni o'rab turgan guruh ham ochilsin */
+ document.addEventListener('toggle',function(e){var d=e.target;if(!d||d.tagName!=='DETAILS'||!d.open)return;
+  var p=d.parentElement;while(p&&p.tagName==='DETAILS'){p.open=true;p=p.parentElement}},true);
+ function run(){try{group();search()}catch(e){console.error('panel',e)}}
+ run();setTimeout(run,800);setTimeout(run,2500);
+ /* Render bepul serveri uxlab qolgan bo'lsa, Telegram yuborishdan oldin uyg'otish */
+ try{var u=((window.USTACAD_TG||{}).UPLOAD_URL||'').replace(/\/(telegram|upload|pro)\/?$/,'');
+  if(/^https:/.test(u))fetch(u+'/',{mode:'no-cors',cache:'no-store'}).catch(function(){})}catch(e){}
+})();
 </script>
 </body></html>
