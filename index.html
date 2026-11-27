@@ -1513,7 +1513,7 @@ function frGeo(p,holes){var tp=p.tp/100,tw=p.tw*Math.PI/180,bd=p.bd*Math.PI/180,
 function buildFree(m){var g=new THREE.Group(),P=(m.fr&&m.fr.parts)||[];g.userData.id=m.id;g.position.set(m.x/1000,m.y/1000,(m.z||0)/1000);
  P.forEach(function(p,i){if(p.op==='sub')return;try{var geo=frGeo(p,frHoles(m,i)),mt=matN(p.mat),o=ovMesh(g,geo,mt,p.n,p.px,p.py,p.pz,'freeform · '+p.th+' mm');
   if(!frPath(p)){if(p.ori==='h')o.rotation.x=-Math.PI/2;else if(p.ori==='s')o.rotation.y=Math.PI/2}}catch(e){console.error('free',p.n,e)}});
- try{var bx=new THREE.Box3().setFromObject(g);if(!bx.isEmpty()){m.w=Math.max(50,Math.round((bx.max.x-bx.min.x)*1000));m.h=Math.max(50,Math.round((bx.max.y-bx.min.y)*1000));m.d=Math.max(50,Math.round((bx.max.z-bx.min.z)*1000))}}catch(e){}m.t=18;return g}
+ try{var bx=new THREE.Box3().setFromObject(g);if(!bx.isEmpty()){m.w=Math.max(50,Math.round((bx.max.x-bx.min.x)*1000));m.h=Math.max(50,Math.round((bx.max.y-bx.min.y)*1000));m.d=Math.max(50,Math.round((bx.max.z-bx.min.z)*1000));if(m.fr.ex>0){var cc=bx.getCenter(new THREE.Vector3()),sz=Math.max(m.w,m.h,m.d,300)/1000;g.children.forEach(function(o){if(!o.isMesh)return;var dv=new THREE.Box3().setFromObject(o).getCenter(new THREE.Vector3()).sub(cc);if(dv.length()<1e-4)dv.set(0,1,0);dv.normalize();o.position.addScaledVector(dv,m.fr.ex*.6*sz)})}}}catch(e){}m.t=18;return g}
 function freeParts(m){var R=[],P=(m.fr&&m.fr.parts)||[];P.forEach(function(p,i){if(p.op==='sub')return;var O=frOut(p),b=frBB(O),pr=frPer(O,p.cl),L,W,sw=frPath(p);if(O.length<3)return;
  L=Math.round(Math.max(b.w,b.h));W=Math.round(Math.min(b.w,b.h));if(sw){var l=0,j;for(j=1;j<sw.length;j++)l+=Math.hypot(sw[j][0]-sw[j-1][0],sw[j][1]-sw[j-1][1]);L=Math.round(l);W=Math.round(Math.max(b.w,b.h))}
  var e=p.ed==='no'?0:p.ed==='str'?(pr.L-pr.C):pr.L;R.push({name:p.n,L:L,W:W,T:p.th,q:1,mt:p.mat,fl:p.ed==='no'?[0,0,0,0]:[1,1,1,1],e:e/1000,k:'k',r:p.R>0?Math.round(p.R):0})});return R}
@@ -1529,7 +1529,7 @@ function frUI(){var an=document.getElementById('vtd')||document.getElementById('
  function tg(p){if(top){if(!p.lf)p.lf=p.pts.map(function(q){return[q[0]*.6+80,q[1]*.6+60]});return p.lf}return p.pts}
  function sn(v){return snap>0?Math.round(v/snap)*snap:Math.round(v*10)/10}
  function w2s(q){return[V.ox+q[0]*V.k,V.oy-q[1]*V.k]}
- function s2w(x,y){return[sn((x-V.ox)/V.k),sn((V.oy-y)/V.k)]}
+ function s2w(x,y){var p=fp(),r=[(x-V.ox)/V.k,(V.oy-y)/V.k],b=1e9,q=null,c=[];if(p&&window.frSnapOn!==false){var T=tg(p),n=T.length;T.forEach(function(a,i){if(i!==sel){c.push(a);var nx=T[(i+1)%n];if(i+1<n||p.cl)c.push([(a[0]+nx[0])/2,(a[1]+nx[1])/2])}});var bb=frBB(T);c.push([bb.x0+bb.w/2,bb.y0+bb.h/2]);c.forEach(function(a){var s=w2s(a),dd=Math.hypot(s[0]-x,s[1]-y);if(dd<12&&dd<b){b=dd;q=a}})}return q?[Math.round(q[0]*10)/10,Math.round(q[1]*10)/10]:[sn(r[0]),sn(r[1])]}
  function fit(){var p=fp();if(!p)return;var b=frBB(tg(p).concat([[0,0]]).map(function(q){return[q[0],q[1]]})),W=cv.clientWidth||300,H=cv.clientHeight||260;V.k=Math.max(.02,Math.min((W-50)/Math.max(b.w,50),(H-50)/Math.max(b.h,50)));V.ox=25-b.x0*V.k;V.oy=H-25+b.y0*V.k}
  function draw(){var p=fp(),W=cv.clientWidth,H=cv.clientHeight,st=Math.max(snap||10,Math.ceil(12/V.k)),x,y,css=getComputedStyle(document.documentElement);if(cv.width!==W*2)cv.width=W*2,cv.height=H*2;cx.setTransform(2,0,0,2,0,0);cx.clearRect(0,0,W,H);
   cx.strokeStyle='rgba(128,128,128,.18)';cx.lineWidth=1;for(x=Math.floor((-V.ox/V.k)/st)*st;x<(W-V.ox)/V.k;x+=st){cx.beginPath();cx.moveTo(V.ox+x*V.k,0);cx.lineTo(V.ox+x*V.k,H);cx.stroke()}
@@ -1597,8 +1597,146 @@ function frUI(){var an=document.getElementById('vtd')||document.getElementById('
  cv.addEventListener('wheel',function(e){e.preventDefault();var s=pos(e),f=e.deltaY<0?1.15:1/1.15;V.ox=s[0]-(s[0]-V.ox)*f;V.oy=s[1]-(s[1]-V.oy)*f;V.k*=f;draw()},{passive:false});
  window.addEventListener('keydown',function(e){if(!d.open||/INPUT|SELECT|TEXTAREA/.test((e.target||{}).tagName||''))return;var p=fp();if(!p)return;if((e.key==='Delete'||e.key==='Backspace')&&sel>=0){document.getElementById('fr_vdel').click();e.preventDefault()}});
  window.addEventListener('resize',function(){draw()});d.addEventListener('toggle',function(){if(d.open){fit();draw()}});
- setInterval(function(){var m=fm(),k=m?m.id:'';if(k!==last){last=k;pi=0;sel=-1;top=false;plist();sel2ui();if(d.open){fit();draw()}}},400);plist();sel2ui()}
+ setInterval(function(){var m=fm(),k=m?m.id:'';if(k!==last){last=k;pi=0;sel=-1;top=false;plist();sel2ui();if(d.open){fit();draw()}}},400);window.frRefresh=function(){plist();sel2ui();fit();draw()};plist();sel2ui()}
 try{PRE.free={name:'Erkin modul',w:600,h:18,d:400,y:0,doors:0,drawers:0,shelves:0};PN.free='Erkin modul (freeform)';frUI()}catch(e){console.error('free',e)}
+/* ---- FREEFORM ADVANCED CAD ---- */
+function frClone(o){return JSON.parse(JSON.stringify(o))}
+function frMirror(p,X0){var c=frClone(p);c.pts=c.pts.map(function(q){return[-q[0],q[1]]});if(c.lf)c.lf=c.lf.map(function(q){return[-q[0],q[1]]});c.px=2*X0-p.px;c.rot=-(p.rot||0);c.tw=-(p.tw||0);c.n=p.n+' (mirror)';return c}
+function frRotP(P,a){var c=Math.cos(a),s=Math.sin(a);return P.map(function(q){return[q[0]*c-q[1]*s,q[0]*s+q[1]*c]})}
+function frRadial(p,n,X0,Z0){var o=[],i,t,c,dx,dz;for(i=1;i<n;i++){t=2*Math.PI*i/n;c=frClone(p);c.pts=frRotP(p.pts,t);if(p.lf)c.lf=frRotP(p.lf,t);dx=p.px-X0;dz=p.pz-Z0;c.px=X0+dx*Math.cos(t)+dz*Math.sin(t);c.pz=Z0-dx*Math.sin(t)+dz*Math.cos(t);c.n=p.n+' #'+(i+1);o.push(c)}return o}
+function frCirc(x,y,d){var P=[],i;for(i=0;i<24;i++)P.push([Math.round((x+d/2*Math.cos(i*Math.PI/12))*100)/100,Math.round((y+d/2*Math.sin(i*Math.PI/12))*100)/100]);return P}
+function frHoleList(p,d,inset,step,edge){var b=frBB(frOut(p)),o=[],x,y,n,i,len,e=Math.max(inset,d/2+1);
+ if(edge==='b'||edge==='t'){len=b.w-2*e;y=edge==='b'?b.y0+e:b.y1-e;n=Math.max(2,Math.floor(len/step)+1);for(i=0;i<n;i++)o.push([b.x0+e+len*i/(n-1),y])}
+ else{len=b.h-2*e;x=edge==='l'?b.x0+e:b.x1-e;n=Math.max(2,Math.floor(len/step)+1);for(i=0;i<n;i++)o.push([x,b.y0+e+len*i/(n-1)])}
+ return o.map(function(q){return frDef({n:'Teshik Ø'+d,op:'sub',mode:'poly',pts:frCirc(q[0],q[1],d)})})}
+function frIn(pt,P){var c=false,i,j=P.length-1;for(i=0;i<P.length;i++){if((P[i][1]>pt[1])!==(P[j][1]>pt[1])&&pt[0]<(P[j][0]-P[i][0])*(pt[1]-P[i][1])/(P[j][1]-P[i][1])+P[i][0])c=!c;j=i}return c}
+function frImp(txt){var L=txt.split(/\r?\n/),cur=null,x=null,R=[],i;
+ function fin(){if(!cur)return;var P=cur.pts.slice();if(cur.k==='ci'){var r=cur.r;P=frCirc(cur.c[0],cur.c[1],2*r);cur.cl=1}
+  if(P.length>2&&Math.hypot(P[0][0]-P[P.length-1][0],P[0][1]-P[P.length-1][1])<.01){P.pop();cur.cl=1}if(P.length>=2)R.push({pts:P,cl:!!cur.cl});cur=null}
+ for(i=0;i+1<L.length;i+=2){var c=L[i].trim(),v=L[i+1].trim();
+  if(c==='0'){if(v==='LWPOLYLINE'){fin();cur={k:'lw',pts:[],cl:0}}else if(v==='POLYLINE'){fin();cur={k:'pl',pts:[],cl:0,vx:0}}else if(v==='VERTEX'&&cur&&cur.k==='pl')cur.vx=1;else if(v==='CIRCLE'){fin();cur={k:'ci',pts:[],c:[0,0],r:0,cl:1}}else if(v==='SEQEND'||v==='ENDSEC'||v==='LINE'||v==='ARC'||v==='TEXT'){fin()}else if(!(cur&&cur.k==='pl'))fin()}
+  else if(cur){if(c==='70'&&!cur.vx)cur.cl=(+v)&1;else if(c==='10')x=parseFloat(v);else if(c==='20'){var y=parseFloat(v);if(cur.k==='ci')cur.c=[x,y];else if(cur.k==='lw'||cur.vx)cur.pts.push([x,y])}else if(c==='40'&&cur.k==='ci')cur.r=parseFloat(v)}}
+ fin();R.forEach(function(r){r.a=Math.abs(frArea(r.pts))});R.sort(function(a,b){return b.a-a.a});
+ var out=[];R.forEach(function(r){var host=null;out.forEach(function(s){if(!host&&frIn(r.pts[0],s.pts)&&frIn(r.pts[Math.floor(r.pts.length/2)],s.pts))host=s});
+  if(host)host.h.push(r);else out.push({pts:r.pts,cl:r.cl,h:[]})});
+ var P=[];out.forEach(function(s,i){P.push(frDef({n:'DXF '+(i+1),pts:s.pts.map(function(q){return[Math.round(q[0]*1000)/1000,Math.round(q[1]*1000)/1000]}),cl:s.cl}));s.h.forEach(function(h,j){P.push(frDef({n:'DXF '+(i+1)+' o‘yiq '+(j+1),op:'sub',pts:h.pts,cl:true}))})});return P}
+function frMinR(P){var n=P.length,i,a,b,c,l1,l2,cr,th,sharp=0,tight=0,rmin=1e9;if(frArea(P)<0)P=P.slice().reverse();
+ for(i=0;i<n;i++){a=P[(i-1+n)%n];b=P[i];c=P[(i+1)%n];l1=Math.hypot(b[0]-a[0],b[1]-a[1]);l2=Math.hypot(c[0]-b[0],c[1]-b[1]);if(l1<1e-6||l2<1e-6)continue;
+  cr=(b[0]-a[0])*(c[1]-b[1])-(b[1]-a[1])*(c[0]-b[0]);th=Math.acos(Math.max(-1,Math.min(1,((b[0]-a[0])*(c[0]-b[0])+(b[1]-a[1])*(c[1]-b[1]))/(l1*l2))));
+  if(cr<0&&th>.02){if(th>.35){sharp++;rmin=0}else{var r=(l1+l2)/2/th;rmin=Math.min(rmin,r)}}}return{sharp:sharp,rmin:rmin}}
+function frTool(p,m,T){var O=frOut(p),r=T.d/2,E=[],W=[],paths=[],len=0,cut=p.th+.5,passes=Math.max(1,Math.ceil(cut/T.sd));if(frArea(O)<0)O.reverse();
+ var mr=frMinR(O);if(mr.sharp)E.push(mr.sharp+' ta o‘tkir ichki burchak: freza Ø'+T.d+' mm yaxlit kesa olmaydi (radius ≥ '+r+' mm kerak)');else if(mr.rmin<r*.99)E.push('ichki radius '+mr.rmin.toFixed(1)+' mm < freza radiusi '+r+' mm');
+ var out=frOffset(O,r);paths.push({k:'out',pts:out});
+ var i=m.fr.parts.indexOf(p),hs=frHoles(m,i);hs.forEach(function(h){var H=frOut(h);if(frArea(H)<0)H.reverse();var s=frOffset(H,-r),b=frBB(H);if(Math.min(b.w,b.h)<=T.d+.01||frArea(s)<=0){E.push(h.n+': teshik freza diametridan kichik');return}
+  var hm=frBB(H);if(frMinR(s).sharp===0&&H.length<8)W.push(h.n+': burchaklari freza radiusiga teng yumaloq bo‘ladi');paths.push({k:'hole',pts:s})});
+ paths.forEach(function(q){len+=frPer(q.pts,true).L});return{E:E,W:W,paths:paths,passes:passes,cut:cut,len:len,time:len*passes/T.f+passes*.1,O:O}}
+function frGcode(p,m,T){var R=frTool(p,m,T),b=frBB(R.O),sx=-b.x0,sy=-b.y0,g=[],f=function(v){return v.toFixed(3)},k,z;
+ g.push('(UstaCAD freeform: '+p.n+' · PREVIEW — postprocessor va xavfsizlikni stanokda tekshiring)','G21 G90 G17','M3 S'+T.s,'G0 Z'+f(T.z));
+ R.paths.forEach(function(q){for(k=1;k<=R.passes;k++){z=-Math.min(k*T.sd,R.cut);g.push('G0 X'+f(q.pts[0][0]+sx)+' Y'+f(q.pts[0][1]+sy),'G1 Z'+f(z)+' F'+Math.round(T.f/3));
+  q.pts.forEach(function(v,i){g.push('G1 X'+f(v[0]+sx)+' Y'+f(v[1]+sy)+(i===0?' F'+T.f:''))});g.push('G1 X'+f(q.pts[0][0]+sx)+' Y'+f(q.pts[0][1]+sy),'G0 Z'+f(T.z))}});
+ g.push('M5','G0 X0 Y0','M30');return{g:g.join('\n'),R:R}}
+function frStl(T,name){var o=['solid '+name],i,a,b,c,n,l;for(i=0;i<T.length;i+=9){a=[T[i+3]-T[i],T[i+4]-T[i+1],T[i+5]-T[i+2]];b=[T[i+6]-T[i],T[i+7]-T[i+1],T[i+8]-T[i+2]];n=[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];l=Math.hypot(n[0],n[1],n[2])||1;
+  o.push('facet normal '+(n[0]/l).toFixed(5)+' '+(n[1]/l).toFixed(5)+' '+(n[2]/l).toFixed(5),'outer loop');for(c=0;c<9;c+=3)o.push('vertex '+T[i+c].toFixed(3)+' '+T[i+c+1].toFixed(3)+' '+T[i+c+2].toFixed(3));o.push('endloop','endfacet')}o.push('endsolid '+name);return o.join('\n')}
+function frObj(T){var o=['# UstaCAD freeform (mm)'],i;for(i=0;i<T.length;i+=3)o.push('v '+T[i].toFixed(3)+' '+T[i+1].toFixed(3)+' '+T[i+2].toFixed(3));for(i=0;i<T.length/3;i+=3)o.push('f '+(i+1)+' '+(i+2)+' '+(i+3));return o.join('\n')}
+function frTris(g){var T=[],o;g.updateMatrixWorld(true);g.traverse(function(o){if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;var A=o.geometry.attributes.position,I=o.geometry.index,k,v=new THREE.Vector3(),n=I?I.count:A.count;
+  for(k=0;k<n;k++){v.fromBufferAttribute(A,I?I.getX(k):k).applyMatrix4(o.matrixWorld);T.push((v.x-g.position.x)*1000,(v.y-g.position.y)*1000,(v.z-g.position.z)*1000)}});return T}
+function frDiff(A,B){var o=[],ma={},mb={};A.forEach(function(p){ma[p.n]=p});B.forEach(function(p){mb[p.n]=p});
+ Object.keys(mb).forEach(function(k){if(!ma[k])o.push('+ qo‘shilgan: '+k);else{var a=ma[k],b=mb[k],x=frBB(frOut(a)),y=frBB(frOut(b)),ch=[];if(Math.abs(x.w-y.w)>.5||Math.abs(x.h-y.h)>.5)ch.push('o‘lcham '+Math.round(x.w)+'×'+Math.round(x.h)+' → '+Math.round(y.w)+'×'+Math.round(y.h));if(a.th!==b.th)ch.push('qalinlik '+a.th+' → '+b.th);if(a.mat!==b.mat)ch.push('material '+a.mat+' → '+b.mat);if(a.px!==b.px||a.py!==b.py||a.pz!==b.pz)ch.push('joyi o‘zgargan');if(ch.length)o.push('~ '+k+': '+ch.join(', '))}});
+ Object.keys(ma).forEach(function(k){if(!mb[k])o.push('− o‘chirilgan: '+k)});return o}
+/*FX-UI*/
+function fxUI(){var an=document.getElementById('frd'),d,E=function(i){return document.getElementById(i)},H={},LK='ustacad_frlib',anim=0;if(!an||E('fxd'))return;
+ function fm(){var m=null;S.mods.forEach(function(x){if(x.id===S.sel&&x.type==='free')m=x});return m}
+ function ix(){return+(E('fr_ps')&&E('fr_ps').value)||0}
+ function fp(){var m=fm();return m?m.fr.parts[ix()]:null}
+ function need(){var m=fm();if(!m)toast('Avval erkin modulni tanlang');return m}
+ function v(i,def){var x=parseFloat(E(i).value);return isNaN(x)?def:x}
+ function done(msg){all();commit();if(window.frRefresh)window.frRefresh();if(msg)toast(msg)}
+ function grp(m){var g=null;scene.traverse(function(o){if(o.userData&&o.userData.id===m.id&&o.isGroup&&!g)g=o});return g}
+ function lib(){try{return JSON.parse(localStorage.getItem(LK)||'[]')}catch(e){return[]}}
+ function hist(m){return H[m.id]||(H[m.id]=[])}
+ function snap(m,t){var h=hist(m);h.push({t:t,d:new Date().toLocaleTimeString(),s:JSON.stringify(m.fr.parts)});if(h.length>20)h.shift();lists()}
+ function opts(a,f){return a.map(function(x,i){return'<option value="'+i+'">'+f(x,i)+'</option>'}).join('')}
+ function lists(){var m=fm(),h=m?hist(m):[];['fx_h1','fx_h2'].forEach(function(i){E(i).innerHTML=opts(h,function(x,k){return(k+1)+'. '+x.t+' · '+x.d})});E('fx_lib').innerHTML=opts(lib(),function(x){return x.n})}
+ var n=function(i,l,val){return'<label>'+l+'<input id="fx_'+i+'" type="number" inputmode="decimal" step="any" value="'+val+'"></label>'};
+ d=document.createElement('details');d.id='fxd';
+ d.innerHTML='<summary>Freeform: kengaytirilgan CAD</summary><p style="font-size:12px;color:var(--mt);margin:4px 0">Tanlangan detal ustida ishlaydi (yuqoridagi ro‘yxatdan tanlang).</p>'+
+ '<b style="font-size:12px">Mirror / massiv / radial</b><div class="g">'+n('mx','Mirror tekisligi X, mm',0)+n('an','Soni',3)+n('adx','Qadam X',100)+n('ady','Qadam Y',0)+n('adz','Qadam Z',0)+n('rcx','Radial markaz X',0)+n('rcz','Radial markaz Z',0)+'</div><div class="row"><button id="fx_mir">Mirror</button><button id="fx_arr">Chiziqli massiv</button><button id="fx_rad">Radial massiv (tekis detal)</button></div>'+
+ '<b style="font-size:12px;display:block;margin-top:8px">Hole Wizard (teshik ochadi)</b><div class="g"><label>Tur<select id="fx_ht"><option value="8">Dowel Ø8</option><option value="7">Confirmat Ø7</option><option value="15">Minifix Ø15</option><option value="0">Boshqa</option></select></label>'+n('hd','Boshqa Ø',5)+n('hi','Chetdan, mm',37)+n('hs','Oraliq, mm',128)+'<label>Chet<select id="fx_he"><option value="b">Pastki</option><option value="t">Yuqori</option><option value="l">Chap</option><option value="r">O‘ng</option></select></label></div><div class="row"><button id="fx_hole">Teshiklarni joylash</button></div>'+
+ '<b style="font-size:12px;display:block;margin-top:8px">Tahlil va ko‘rinish</b><div class="row"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="fx_snap" checked style="width:auto">Smart snap (endpoint, midpoint, center)</label></div><div class="row"><button id="fx_col">Collision tekshiruvi</button><button id="fx_asm">Yig‘ish animatsiyasi</button><button id="fx_exp">Ajratish animatsiyasi</button></div><div class="g">'+n('ex','Exploded view, %',0)+'<label>Kesim<select id="fx_sa"><option value="">Yo‘q</option><option value="x">X</option><option value="y">Y</option><option value="z">Z</option></select></label>'+n('sp','Kesim joyi, mm',500)+'</div>'+
+ '<b style="font-size:12px;display:block;margin-top:8px">Import / eksport</b><div class="row"><input type="file" id="fx_imp" accept=".dxf" style="width:auto"><button id="fx_stl">STL</button><button id="fx_obj">OBJ</button></div>'+
+ '<b style="font-size:12px;display:block;margin-top:8px">CNC toolpath</b><div class="g">'+n('td','Freza Ø, mm',6)+n('tsd','Bir o‘tishda chuqurlik',6)+n('tz','Xavfsiz Z, mm',5)+n('tf','Surish, mm/min',3000)+n('ts','Shpindel, rpm',18000)+'</div><canvas id="fx_cv" style="width:100%;height:200px;border:1px solid var(--bd);border-radius:8px;background:var(--in)"></canvas><div class="row"><button id="fx_tp">Toolpath preview</button><button id="fx_gc">G-code (.nc)</button></div><p id="fx_ti" style="font-size:12px;color:var(--mt)"></p>'+
+ '<b style="font-size:12px;display:block;margin-top:8px">Tarix, solishtirish, kutubxona</b><div class="row"><input id="fx_hn" type="text" placeholder="Versiya nomi" style="flex:1"><button id="fx_hs">Saqlash</button></div><div class="row"><select id="fx_h1" style="flex:1"></select><button id="fx_hr">Qaytish</button></div><div class="row"><select id="fx_h2" style="flex:1"></select><button id="fx_hc">Hozirgi bilan solishtirish</button></div>'+
+ '<div class="row"><button id="fx_ls">Detalni kutubxonaga</button><select id="fx_lib" style="flex:1"></select><button id="fx_la">Qo‘shish</button><button id="fx_ld">🗑</button></div><p id="fx_info" style="font-size:12px;color:var(--mt)"></p>';
+ an.parentNode.insertBefore(d,an.nextSibling);
+ function T(){return{d:v('fx_td',6),sd:Math.max(.5,v('fx_tsd',6)),z:v('fx_tz',5),f:Math.max(100,v('fx_tf',3000)),s:v('fx_ts',18000)}}
+ function inf(t){E('fx_info').textContent=t}
+ E('fx_snap').onchange=function(){window.frSnapOn=E('fx_snap').checked};
+ E('fx_mir').onclick=function(){var m=need(),p=fp();if(!m||!p)return;if(p.ori==='s'||frPath(p)){toast('Mirror: tekis yoki tik detal kerak (sweep/yon emas)');return}snap(m,'Mirror oldidan');m.fr.parts.splice(ix()+1,0,frMirror(p,v('fx_mx',0)));done('Mirror nusxa yaratildi')};
+ E('fx_arr').onclick=function(){var m=need(),p=fp();if(!m||!p)return;var k=Math.max(2,Math.min(50,Math.round(v('fx_an',3)))),i,c;snap(m,'Massiv oldidan');for(i=1;i<k;i++){c=frClone(p);c.n=p.n+' #'+(i+1);c.px+=i*v('fx_adx',0);c.py+=i*v('fx_ady',0);c.pz+=i*v('fx_adz',0);m.fr.parts.push(c)}done(k+' ta nusxa (massiv)')};
+ E('fx_rad').onclick=function(){var m=need(),p=fp();if(!m||!p)return;if(p.ori!=='h'||frPath(p)){toast('Radial massiv faqat tekis (plan) detal uchun');return}var k=Math.max(2,Math.min(50,Math.round(v('fx_an',3))));snap(m,'Radial oldidan');frRadial(p,k,v('fx_rcx',0),v('fx_rcz',0)).forEach(function(c){m.fr.parts.push(c)});done(k+' ta radial nusxa')};
+ E('fx_hole').onclick=function(){var m=need(),p=fp();if(!m||!p||p.op==='sub')return;var dd=+E('fx_ht').value||v('fx_hd',5),L=frHoleList(p,dd,v('fx_hi',37),Math.max(16,v('fx_hs',128)),E('fx_he').value),i=ix(),j=i+1;while(m.fr.parts[j]&&m.fr.parts[j].op==='sub')j++;snap(m,'Teshik oldidan');m.fr.parts.splice.apply(m.fr.parts,[j,0].concat(L));done(L.length+' ta teshik Ø'+dd+' (o‘tuvchi)')};
+ E('fx_col').onclick=function(){var m=need();if(!m)return;var g=grp(m);if(!g){toast('3D model topilmadi');return}var M=[],o=[],i,j;g.children.forEach(function(c){if(c.isMesh)M.push({n:c.userData.part,b:new THREE.Box3().setFromObject(c)})});
+  for(i=0;i<M.length;i++)for(j=i+1;j<M.length;j++){var x=M[i].b.clone().intersect(M[j].b);if(!x.isEmpty()){var s=x.getSize(new THREE.Vector3()).multiplyScalar(1000);if(Math.min(s.x,s.y,s.z)>.5)o.push(M[i].n+' ⇄ '+M[j].n+' ('+Math.round(s.x)+'×'+Math.round(s.y)+'×'+Math.round(s.z)+' mm)')}}
+  inf(o.length?'To‘qnashuv ('+o.length+'): '+o.slice(0,8).join('; ')+' · AABB bo‘yicha taxminiy':'To‘qnashuv topilmadi ('+M.length+' detal, AABB tekshiruvi)')};
+ function run(a,b){var m=need();if(!m)return;cancelAnimationFrame(anim);var t0=performance.now();(function f(t){var u=Math.min(1,(t-t0)/2200);m.fr.ex=a+(b-a)*(u<.5?2*u*u:1-2*(1-u)*(1-u));E('fx_ex').value=Math.round(m.fr.ex*100);all();if(u<1)anim=requestAnimationFrame(f)})(t0)}
+ E('fx_asm').onclick=function(){run(1,0)};E('fx_exp').onclick=function(){run(0,1)};
+ E('fx_ex').oninput=function(){var m=fm();if(!m)return;m.fr.ex=Math.max(0,Math.min(1,v('fx_ex',0)/100));all()};
+ function cut(){var a=E('fx_sa').value,c=v('fx_sp',500)/1000;try{renderer.clippingPlanes=a?[new THREE.Plane(new THREE.Vector3(a==='x'?-1:0,a==='y'?-1:0,a==='z'?-1:0),c)]:[];all()}catch(e){toast('Kesim bu qurilmada ishlamadi')}}
+ E('fx_sa').onchange=cut;E('fx_sp').oninput=cut;
+ E('fx_imp').onchange=function(){var f=E('fx_imp').files[0];if(!f)return;var r=new FileReader();r.onload=function(){var P=frImp(String(r.result));if(!P.length){toast('DXF da yopiq kontur topilmadi (LWPOLYLINE, POLYLINE, CIRCLE qo‘llanadi)');return}var m=fm(),bad=[];if(!m){addMod('free',{fr:{parts:P},name:'DXF import',w:600,h:18,d:400,body:'LDSP oq',front:'LDSP oq'})}else{snap(m,'DXF oldidan');P.forEach(function(p){m.fr.parts.push(p)})}
+  P.forEach(function(p){var e=frChk(p);if(e.length)bad.push(p.n+': '+e[0])});all();commit();if(window.frRefresh)window.frRefresh();inf('DXF: '+P.length+' kontur import qilindi. Diagnostika: '+(bad.length?bad.join(' | '):'hammasi yopiq va to‘g‘ri ✓')+' · yoy (bulge) qo‘llanmaydi');E('fx_imp').value=''};r.readAsText(f)};
+ function ex(kind){var m=need();if(!m)return;var g=grp(m);if(!g){toast('3D model topilmadi');return}var t=frTris(g);if(!t.length){toast('Geometriya yo‘q');return}dl('erkin_modul.'+kind,kind==='stl'?frStl(t,'ustacad'):frObj(t),'text/plain')}
+ E('fx_stl').onclick=function(){ex('stl')};E('fx_obj').onclick=function(){ex('obj')};
+ function prev(){var m=need(),p=fp();if(!m||!p||p.op==='sub')return null;var R=frTool(p,m,T()),cv=E('fx_cv'),cx=cv.getContext('2d'),W=cv.clientWidth,Hh=cv.clientHeight;cv.width=W*2;cv.height=Hh*2;cx.setTransform(2,0,0,2,0,0);
+  var all2=R.O.concat.apply(R.O,R.paths.map(function(q){return q.pts})),b=frBB(all2),k=Math.min((W-30)/Math.max(b.w,1),(Hh-30)/Math.max(b.h,1)),X=function(q){return 15+(q[0]-b.x0)*k},Y=function(q){return Hh-15-(q[1]-b.y0)*k};
+  function line(P,c,w){cx.strokeStyle=c;cx.lineWidth=w;cx.beginPath();P.forEach(function(q,i){i?cx.lineTo(X(q),Y(q)):cx.moveTo(X(q),Y(q))});cx.closePath();cx.stroke()}
+  line(R.O,'#888',2);R.paths.forEach(function(q){line(q.pts,'#e33',1.2)});var s=R.paths[0].pts[0];cx.setLineDash([3,3]);cx.beginPath();cx.arc(X(s),Y(s),T().d/2*k,0,7);cx.stroke();cx.setLineDash([]);
+  E('fx_ti').textContent='O‘tishlar: '+R.passes+' (chuqurlik '+R.cut.toFixed(1)+' mm) · yo‘l: '+(R.len*R.passes/1000).toFixed(2)+' m · vaqt ≈ '+R.time.toFixed(1)+' min'+(R.E.length?' · ⛔ '+R.E.join('; '):'')+(R.W.length?' · ⚠ '+R.W.join('; '):'');return R}
+ E('fx_tp').onclick=prev;
+ E('fx_gc').onclick=function(){var m=need(),p=fp();if(!m||!p||p.op==='sub')return;var er=frChk(p);if(er.length){toast('Kontur xato: '+er[0]);return}var r=frGcode(p,m,T());prev();if(r.R.E.length){toast('G-code chiqarilmadi: '+r.R.E[0]);return}dl((p.n||'detal').replace(/[^\w\-]+/g,'_')+'.nc',r.g,'text/plain')};
+ E('fx_hs').onclick=function(){var m=need();if(!m)return;snap(m,E('fx_hn').value||'Versiya '+(hist(m).length+1));E('fx_hn').value='';toast('Tarixga saqlandi')};
+ E('fx_hr').onclick=function(){var m=need(),h=hist(m||{id:-1})[+E('fx_h1').value];if(!m||!h)return;snap(m,'Qaytishdan oldin');m.fr.parts=JSON.parse(h.s);done('Versiya tiklandi: '+h.t)};
+ E('fx_hc').onclick=function(){var m=need(),h=m&&hist(m)[+E('fx_h2').value];if(!h)return;var o=frDiff(JSON.parse(h.s),m.fr.parts);inf(o.length?'Farqlar ('+h.t+' → hozir): '+o.join('; '):'Farq yo‘q')};
+ E('fx_ls').onclick=function(){var m=need(),p=fp();if(!m||!p)return;var i=ix(),j=i+1,P=[frClone(p)];while(m.fr.parts[j]&&m.fr.parts[j].op==='sub'){P.push(frClone(m.fr.parts[j]));j++}var L=lib();L.push({n:p.n,parts:P});try{localStorage.setItem(LK,JSON.stringify(L))}catch(e){toast('Saqlab bo‘lmadi');return}lists();toast('Kutubxonaga saqlandi')};
+ E('fx_la').onclick=function(){var m=need(),c=lib()[+E('fx_lib').value];if(!m||!c)return;snap(m,'Kutubxona oldidan');c.parts.forEach(function(p){var q=frClone(p);if(q.op!=='sub'){q.px+=60;q.pz+=60}m.fr.parts.push(q)});done('Kutubxonadan qo‘shildi: '+c.n)};
+ E('fx_ld').onclick=function(){var L=lib();L.splice(+E('fx_lib').value,1);try{localStorage.setItem(LK,JSON.stringify(L))}catch(e){}lists()};
+ setInterval(function(){var m=fm(),k=m?m.id:0;if(k!==H.__k){H.__k=k;if(m&&m.fr&&m.fr.ex!=null)E('fx_ex').value=Math.round(m.fr.ex*100);lists()}},500);lists()}
+try{fxUI()}catch(e){console.error('fx',e)}
+/* ---- JOINT PRO: finger joint / dovetail (freeform detallar) ---- */
+function jnT(L,n,d,tp){var c=L/n,t=d*Math.tan(tp*Math.PI/180),T=[[0,0]],k,x0,x1;
+ if(n%2===0)n++,c=L/n;
+ for(k=1;k<n;k+=2){x0=k*c;x1=x0+c;T.push([x0+t,0],[x0,d],[x1,d],[x1-t,0])}
+ T.push([L,0]);return{T:T,c:c,t:t,n:n}}
+function jnOK(L,n,d,tp){if(!(L>0&&d>0&&n>=3))return'Uzunlik, chuqurlik > 0 va kamida 3 ta bo‘lak kerak';var c=L/(n%2?n:n+1),t=d*Math.tan(tp*Math.PI/180);if(tp<0||tp>30)return'Dovetail burchagi 0–30° bo‘lishi kerak';if(2*t>=c*.9)return'Burchak/chuqurlik katta: tish ildizi juda ingichka';return''}
+function jnApply(P,i,n,d,tp){var a=P[i],b=P[(i+1)%P.length],L=Math.hypot(b[0]-a[0],b[1]-a[1]),u=[(b[0]-a[0])/L,(b[1]-a[1])/L],A=0,j,r,q,o=[],J;
+ for(j=0;j<P.length;j++){q=P[j];r=P[(j+1)%P.length];A+=q[0]*r[1]-r[0]*q[1]}
+ var nm=A>=0?[u[1],-u[0]]:[-u[1],u[0]];J=jnT(L,n,d,tp);
+ for(j=0;j<P.length;j++){o.push(P[j].slice());if(j===i)J.T.slice(1,-1).forEach(function(s){o.push([a[0]+u[0]*s[0]+nm[0]*s[1],a[1]+u[1]*s[0]+nm[1]*s[1]])})}
+ return o}
+function jnMate(L,n,d,tp,Bw){var J=jnT(L,n,d,tp);return J.T.concat([[L,Bw],[0,Bw]])}
+function jnUI(){var an=document.getElementById('fxd'),E=function(i){return document.getElementById(i)},d;if(!an||E('jnd'))return;
+ function fm(){var m=null;S.mods.forEach(function(x){if(x.id===S.sel&&x.type==='free')m=x});return m}
+ function v(i,def){var x=parseFloat(E(i).value);return isNaN(x)?def:x}
+ d=document.createElement('details');d.id='jnd';
+ d.innerHTML='<summary>Birikmalar: Finger Joint va Dovetail</summary><p style="font-size:12px;color:var(--mt);margin:4px 0">Tanlangan detalning bitta chekkasiga tishlar qo‘shadi va unga mos juft detalni yaratadi. Nuqtalar 1-raqamdan boshlanadi (kontur tartibida).</p><div class="g"><label>Birikma turi<select id="jn_t"><option value="0">Finger joint (to‘g‘ri tish)</option><option value="12">Dovetail (qaldirg‘och dumi)</option></select></label><label>Chekka № (nuqta № dan keyingi)<input id="jn_e" type="number" min="1" value="1"></label><label>Tishlar soni (toq)<input id="jn_n" type="number" min="3" value="7"></label><label>Tish chuqurligi, mm (juft qalinligi)<input id="jn_d" type="number" min="1" value="18"></label><label>Dovetail burchagi, °<input id="jn_a" type="number" min="1" max="30" value="12"></label><label>Juft detal kengligi, mm<input id="jn_w" type="number" min="20" value="200"></label></div><div class="row"><button class="pr" id="jn_go">Birikma yasash</button></div><p id="jn_i" style="font-size:12px;color:var(--mt)"></p>';
+ an.parentNode.insertBefore(d,an.nextSibling);
+ E('jn_go').onclick=function(){var m=fm(),i=Math.max(0,Math.round(v('jn_e',1))-1),n=Math.round(v('jn_n',7)),dp=v('jn_d',18),tp=E('jn_t').value==='0'?0:v('jn_a',12),bw=v('jn_w',200),p,ps,er,a,b,L,P,B;
+  if(!m){toast('Avval erkin modulni tanlang');return}
+  ps=+(E('fr_ps')&&E('fr_ps').value)||0;p=m.fr.parts[ps];
+  if(!p||p.op==='sub'){toast('Oddiy detal tanlang (teshik emas)');return}
+  if(p.mode!=='poly'||(p.lf&&p.lf.length)){E('jn_i').textContent='Faqat Poly rejimidagi, loftsiz detalga qo‘llanadi.';return}
+  if(!p.cl||p.pts.length<3||i>=p.pts.length){E('jn_i').textContent='Chekka raqami noto‘g‘ri yoki kontur yopiq emas.';return}
+  a=p.pts[i];b=p.pts[(i+1)%p.pts.length];L=Math.hypot(b[0]-a[0],b[1]-a[1]);
+  er=jnOK(L,n,dp,tp);if(er){E('jn_i').textContent='⚠ '+er+' (chekka uzunligi '+Math.round(L)+' mm)';return}
+  P=jnApply(p.pts,i,n,dp,tp);B=jnMate(L,n,dp,tp,bw);
+  p.pts=P;p.R=0;p.C=0;
+  var bb=frBB(frOut(p));
+  m.fr.parts.splice(ps+1,0,frDef({n:p.n+' (juft)',mode:'poly',cl:true,pts:B,th:p.th,mat:p.mat,ed:'no',px:(p.px||0)+bb.w+100,py:p.py||0,pz:p.pz||0,ori:p.ori}));
+  all();commit();if(window.frRefresh)window.frRefresh();
+  E('jn_i').textContent='Tayyor: '+(n%2?n:n+1)+' bo‘lak, '+Math.round(L/(n%2?n:n+1)*10)/10+' mm. Juft detal tanlangan detaldan o‘ngda turibdi: uni kerakli joyga surib, yo‘nalishini (Tekis/Tik/Yon) o‘zgartiring.';toast('Birikma yaratildi')};
+ }
+try{jnUI()}catch(e){console.error('jn',e)}
+
 window.shY=function(m,i){var t=m.t||18,h=m.h,def=t+(h-2*t)*i/((m.shelves||0)+1),v=m.sy&&m.sy[i-1];if(v==null||isNaN(+v))return def;return Math.max(1.5*t+10,Math.min(h-1.5*t-10,+v-t/2))}
 window.pkHTML=function(m){if(m.type==='custom'||!(m.shelves>0))return'';var o='<div style="grid-column:1/-1;font-size:12px;color:var(--mt)">Polkalar balandligi (mm) — modul pastidan polka usti sathigacha</div>',i,t=m.t||18;for(i=1;i<=m.shelves;i++)o+='<label>Polka '+i+'<input data-sy="'+i+'" type="number" min="'+(2*t+10)+'" max="'+(m.h-t-10)+'" step="10" value="'+Math.round(shY(m,i)+t/2)+'"></label>';return o+'<button data-syr="1" style="grid-column:1/-1">Polkalarni tekis taqsimlash</button>'}
 var FIELDS=[["name","Nomi","text"],["w","Eni (mm)",200,3000],["h","Balandligi (mm)",100,2800],["d","Chuqurligi (mm)",100,900],["y","Pol sathidan balandligi (mm)",0,2500],["x","X joyi (mm)",-20000,20000],["shelves","Tokchalar soni",0,10],["doors","Eshiklar soni",0,4],["drawers","Tortmalar soni (0 bo‘lsa eshik)",0,8],["rail","Kiyim quvuri (0 yoki 1)",0,1],["shoes","Poyabzal tokchalari soni",0,6],["basket","Savatlar soni",0,4],["c","Qanot uzunligi (mm)",300,1500],["z","Chuqurlik bo‘yicha joyi (mm)",-10000,10000],["pr","Old radius (mm) — old burchaklar",0,1500],["prb","Orqa radius (mm) — orqa burchaklar",0,1500],["dv","Vertikal to‘siqlar soni",0,6]];
