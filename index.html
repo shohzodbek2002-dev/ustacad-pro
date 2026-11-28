@@ -6638,10 +6638,17 @@ function details(m,M,cfg){
  wall=m.y>=800,isSink=/rakovina|moyka/i.test(k),isOven=/duxovka|oven/i.test(k),isGas=/gaz|plita/i.test(k);
  g.position.set(m.x/1000,m.y/1000,(m.z||0)/1000);g.rotation.y=(m.rot||0)*Math.PI/180;if(m.mir)g.scale.x=-1;
  if(m.type==='custom'||m.type==='oval'||m.type==='burchak')return null;
+ var pv=[];try{var mg=null;R.root.children.some(function(c){if(c.userData&&c.userData.id===m.id){mg=c;return true}return false});
+  if(mg)mg.children.forEach(function(c){if(!c.isGroup)return;for(var q=c.children.length-1;q>=0;q--){var o=c.children[q];if(o.userData&&o.userData.r3h){c.remove(o);if(o.geometry)o.geometry.dispose()}}
+   var ds=false;c.traverse(function(o){if(o.userData&&o.userData.part==='Eshik')ds=true});if(ds&&m.mech!=='lift')pv.push(c)})}catch(e){}
  if(cfg.hw&&M.det){
   var n=Math.max(1,Math.round(w/.45)),i;
-  if(!isOven&&!isGas){/* petlyalar: eshik chetida, 2 ta (baland bo‘lsa 3 ta) */
-   var hH=Math.round(h*1000)-4,hn=hH<=900?2:hH<=1600?3:hH<=2000?4:5,sx=w/2-.012,nd=Math.max(1,m.doors||1),sg,hy;for(sg=-1;sg<=(nd>1?1:-1);sg+=2)for(i=0;i<hn;i++){hy=(100+(hH-200)*i/(hn-1))/1000;cy(g,.0175,.0125,sg*sx,hy,fz-.012,CHR,'z');bx(g,.014,.04,.006,sg*(sx-.008),hy,fz-.024,STEEL)}}
+  if(!isOven&&!isGas){/* petlyalar: kosa eshik ORQASIGA biriktiriladi (eshik bilan birga buriladi), planka yon devor ichida */
+    var hH=Math.round(h*1000)-4,hn=hH<=900?2:hH<=1600?3:hH<=2000?4:5,tt=(m.t||18)/1000,di,pvt=pv.length||Math.max(1,m.doors||1),lf,sgn,hyy,pvo;
+    for(di=0;di<pvt;di++){lf=(pvt===1)||(di<pvt/2);sgn=lf?-1:1;pvo=pv[di]||null;
+     for(i=0;i<hn;i++){hyy=(100+(hH-200)*i/(hn-1))/1000;
+      bx(g,.003,.04,.036,sgn*(w/2-tt-.0015),hyy,d/2-.053,STEEL);
+      if(pvo){var c1=cy(pvo,.0175,.0016,-sgn*.0225,hyy-hH/2000,-.0098,CHR,'z'),c2=cy(pvo,.006,.004,-sgn*.0225,hyy-hH/2000,-.0115,STEEL,'z');c1.userData.r3h=1;c2.userData.r3h=1}}}}
   if(!wall&&m.h<=1000&&M.det>1){/* tortma rels (yon devor ichida, yo‘naltirgich) */
    for(i=0;i<2;i++)bx(g,.008,.022,d*.8,(i?1:-1)*(w/2-.026),h*.55,-.02,STEEL)}
   if(M.det>1&&h>.5&&!wall){/* dekorativ panel: qopqoq ustida ingichka profil */
