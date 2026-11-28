@@ -2615,6 +2615,15 @@ var ray=new THREE.Raycaster(),down=null;
 ray.params.Line.threshold=.0005;ray.params.Points.threshold=.0005;
 function rayHit(list){var a=ray.intersectObjects(list,true),i;for(i=0;i<a.length;i++)if(a[i].object.isMesh)return a[i];return null}
 function modOf(o){while(o&&o.userData.id==null)o=o.parent;return o}
+/* Eshik/tortma ustiga BIR marta bosish: shu fasad ochiladi yoki yopiladi (animatsiya silliq davom etadi). */
+function doorOf(o){for(;o;o=o.parent)for(var k=0;k<anim.length;k++)if(anim[k].p===o)return anim[k];return null}
+function curA(a){return a.ax==="r"?a.p.rotation.y:a.ax==="rx"?a.p.rotation.x:a.p.position.z}
+function doorTap(hit){var da=doorOf(hit.object);if(!da||!da.m)return false;var dm=da.m,snap;
+ dm.fx=dm.fx||{};dm.fx[da.i]=dm.fx[da.i]||{};dm.fx[da.i].open=!isOpen(da);commit();
+ snap=anim.map(function(a){return[a.m.id,a.i,a.ax,curA(a)]});
+ S.sel=dm.id;ui();rebuild();
+ anim.forEach(function(a){for(var k=0;k<snap.length;k++){var q=snap[k];if(q[0]===a.m.id&&q[1]===a.i&&q[2]===a.ax){setA(a,q[3]);break}}});
+ try{hap()}catch(e){}return true}
 renderer.domElement.addEventListener("pointerdown",function(e){down={x:e.clientX,y:e.clientY}});
 renderer.domElement.addEventListener("pointerup",function(e){
  if(!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)>(e.pointerType==='touch'?12:6))return;
@@ -2623,6 +2632,7 @@ renderer.domElement.addEventListener("pointerup",function(e){
  ray.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1),cam);
  var hit=rayHit(root.children);
  if(!hit){S.sel=null;S.cpSel=null;ui();rebuild();return}
+ if(doorTap(hit))return;
  var o=hit.object,cpi=null;while(o&&o.userData.id==null){if(cpi==null&&o.userData.cpi!=null)cpi=o.userData.cpi;o=o.parent}
  var nid=o?o.userData.id:null,cm=nid!=null?get(nid):null;
  if(cm&&cm.type==='custom'&&cpi!=null){if(nid===S.sel&&S.cpMod===nid&&S.cpSel===cpi)S.cpSel=null;else{S.sel=nid;S.cpMod=nid;S.cpSel=cpi}ui();rebuild();hintDrag(e.pointerType!=="mouse");return}
