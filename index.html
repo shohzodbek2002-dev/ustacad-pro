@@ -6974,6 +6974,116 @@ if(typeof module!=='undefined')module.exports=root.B3DEdit;
 })(typeof window!=='undefined'?window:globalThis);
 
 </script>
+<script>/* B3D prod */
+/* UstaCAD · B3D ishlab chiqarish: nesting, DXF, XLSX/CSV, PDF, kromka hisoboti. Mantiq DOMsiz (Node'da sinaladi). */
+(function(root){
+'use strict';
+var CY={'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'j','з':'z','и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'x','ц':'ts','ч':'ch','ш':'sh','щ':'sh','ъ':'','ы':'i','ь':'','э':'e','ю':'yu','я':'ya'};
+function tr(s){return String(s==null?'':s).replace(/[\u0400-\u04ff]/g,function(c){var l=c.toLowerCase(),m=CY[l];if(m===undefined)return '?';return c!==l?m.charAt(0).toUpperCase()+m.slice(1):m}).replace(/[\r\n]+/g,' ')}
+function r1(n){return Math.round(n*10)/10}
+/* detal -> ishlab chiqarish elementi (kontur (0,0) ga surilgan) */
+function items(parts){var out=[],W=[];
+  parts.forEach(function(p){if(!p.contour||!p.contour.ok){W.push('"'+p.name+'" ('+p.code+'): kontur tasdiqlanmagan, ishlab chiqarishga kiritilmadi');return}
+    var seg=p.contour.seg.map(function(s){return[s[0]-p.minx,s[1]-p.miny,s[2]-p.minx,s[3]-p.miny]}),sx=p.sx,sy=p.sy,area=0;
+    seg.forEach(function(s){area+=s[0]*s[3]-s[2]*s[1]});area=Math.abs(area)/2;
+    var rect=Math.abs(area-sx*sy)<0.01*sx*sy&&seg.every(function(s){return Math.abs(s[0]-s[2])<1e-6||Math.abs(s[1]-s[3])<1e-6});
+    if(!rect)W.push('"'+p.name+'" ('+p.code+'): to\'rtburchak emas, kesishda chegara qutisi (bounding box) ishlatiladi');
+    out.push({uid:p.uid,code:p.code,name:p.name,mat:(p.mat||'—'),thick:p.thick,sx:sx,sy:sy,seg:seg,rect:rect,edge:p.edge||{}})});
+  return{items:out,warnings:W}}
+/* ---- nesting: qatlamli (guillotine) joylashtirish — panel pichog'iga mos ---- */
+function packGroup(list,o){
+  var UW=o.W-2*o.trim,UH=o.H-2*o.trim,k=o.kerf,sheets=[],bad=[];
+  list.forEach(function(it){
+    var w=it.w,h=it.h;if(w>UW+1e-9||h>UH+1e-9){if(o.rotate&&h<=UW+1e-9&&w<=UH+1e-9){var t=w;w=h;h=t;it=Object.assign({},it,{rot:!it.rot,w:w,h:h})}else{bad.push(it);return}}
+    for(var si=0;si<=sheets.length;si++){
+      if(si===sheets.length)sheets.push({rows:[],pl:[],usedH:0});
+      var S=sheets[si],done=false;
+      for(var ri=0;ri<S.rows.length&&!done;ri++){var R=S.rows[ri];if(h<=R.h+1e-9&&R.x+w<=UW+1e-9){S.pl.push({it:it,x:R.x,y:R.y,w:w,h:h});R.x+=w+k;done=true}}
+      if(!done){var ny=S.rows.length?S.usedH+k:0;if(ny+h<=UH+1e-9){S.rows.push({y:ny,h:h,x:w+k});S.usedH=ny+h;S.pl.push({it:it,x:0,y:ny,w:w,h:h});done=true}}
+      if(done)break}
+  });
+  return{sheets:sheets.filter(function(s){return s.pl.length}),bad:bad}}
+function nest(its,o){o=Object.assign({W:2800,H:2070,kerf:4,trim:10,rotate:false},o||{});
+  var groups={},res={opt:o,groups:[],errors:[],warnings:[]};
+  if(!(o.W>0&&o.H>0&&o.kerf>=0&&o.trim>=0&&o.W>2*o.trim&&o.H>2*o.trim)){res.errors.push('List o\'lchami/kerf/chekka noto\'g\'ri');return res}
+  its.forEach(function(it){var k=it.mat+'|'+it.thick;(groups[k]=groups[k]||{mat:it.mat,thick:it.thick,list:[]}).list.push(it)});
+  Object.keys(groups).forEach(function(k){var g=groups[k],best=null;
+    var keys=[function(a,b){return b.h-a.h},function(a,b){return b.w-a.w},function(a,b){return b.w*b.h-a.w*a.h}];
+    var orients=o.rotate?['asis','long','short']:['asis'];
+    orients.forEach(function(ori){keys.forEach(function(kf){
+      var L=g.list.map(function(it){var w=it.sx,h=it.sy,rot=false;
+        if(ori==='long'&&h>w){w=it.sy;h=it.sx;rot=true}else if(ori==='short'&&w>h){w=it.sy;h=it.sx;rot=true}
+        return{ref:it,w:w,h:h,rot:rot,code:it.code,name:it.name}}).sort(kf);
+      var r=packGroup(L,o),area=0;r.sheets.forEach(function(s){s.pl.forEach(function(p){area+=p.w*p.h})});
+      var score=[r.bad.length,r.sheets.length,-area/(r.sheets.length||1)];
+      if(!best||score[0]<best.s[0]||(score[0]===best.s[0]&&(score[1]<best.s[1]||(score[1]===best.s[1]&&score[2]<best.s[2]))))best={r:r,s:score}})});
+    var r=best.r,used=0;r.sheets.forEach(function(s){s.pl.forEach(function(p){used+=p.w*p.h})});
+    var sa=r.sheets.length*o.W*o.H;
+    res.groups.push({mat:g.mat,thick:g.thick,count:g.list.length,sheets:r.sheets.map(function(s){return s.pl}),bad:r.bad,usedArea:used,sheetArea:sa,waste:sa?1-used/sa:0});
+    r.bad.forEach(function(b){res.errors.push('"'+b.name+'" ('+b.code+') '+r1(b.w)+'×'+r1(b.h)+' mm — list ichiga sig\'maydi')})});
+  if(o.rotate)res.warnings.push('Aylantirishga ruxsat berilgan: tekstura yo\'nalishi (yog\'och tolasi) buzilishi mumkin');
+  return res}
+/* tekshiruv: chegara, kesishish, sanoq */
+function checkNest(res,total){var E=[],o=res.opt,n=0;
+  res.groups.forEach(function(g){g.sheets.forEach(function(pl,si){n+=pl.length;
+    pl.forEach(function(p,i){if(p.x<-1e-6||p.y<-1e-6||p.x+p.w>o.W-2*o.trim+1e-6||p.y+p.h>o.H-2*o.trim+1e-6)E.push(g.mat+' list '+(si+1)+': "'+p.it.code+'" list chegarasidan chiqqan');
+      for(var j=i+1;j<pl.length;j++){var q=pl[j];if(p.x<q.x+q.w-1e-6&&q.x<p.x+p.w-1e-6&&p.y<q.y+q.h-1e-6&&q.y<p.y+p.h-1e-6)E.push(g.mat+' list '+(si+1)+': "'+p.it.code+'" va "'+q.it.code+'" kesishadi')}})})});
+  var bad=0;res.groups.forEach(function(g){bad+=g.bad.length});if(n+bad!==total)E.push('Detallar soni mos emas: joylangan '+n+' + sig\'magan '+bad+' ≠ '+total);return E}
+/* ---- kromka ---- */
+function edges(its,reservePct){var rows=[],tot=0;
+  its.forEach(function(it){var e=it.edge||{},l=(e.b?it.sx:0)+(e.t?it.sx:0)+(e.l?it.sy:0)+(e.r?it.sy:0);if(l>0){rows.push({code:it.code,name:it.name,mat:it.mat,len:l});tot+=l}});
+  return{rows:rows,totalMm:tot,withReserveM:tot/1000*(1+(reservePct||0)/100)}}
+/* ---- jadvallar ---- */
+function partRows(its){var m={};its.forEach(function(it){var k=[it.code,it.name,it.mat,r1(it.sx),r1(it.sy),r1(it.thick)].join('|');(m[k]=m[k]||{it:it,n:0}).n++});
+  return Object.keys(m).map(function(k){return m[k]})}
+function sheetsOf(res){var a=[];res.groups.forEach(function(g){g.sheets.forEach(function(pl,i){a.push({mat:g.mat,thick:g.thick,idx:i+1,of:g.sheets.length,pl:pl})})});return a}
+function summary(res){return res.groups.map(function(g){return{mat:g.mat,thick:g.thick,count:g.count,sheets:g.sheets.length,usedM2:g.usedArea/1e6,sheetM2:g.sheetArea/1e6,wastePct:g.waste*100}})}
+function csv(its){var rows=[['Kod','Nomi','Soni','Uzunlik mm','Eni mm','Qalinlik mm','Material']];
+  partRows(its).forEach(function(g){var i=g.it;rows.push([i.code,i.name,g.n,r1(i.sx),r1(i.sy),r1(i.thick),i.mat])});
+  return '\ufeff'+rows.map(function(x){return x.map(function(c){c=String(c);return /[;"\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c}).join(';')}).join('\r\n')}
+/* ---- DXF (R12, ASCII, mm). LINE va TEXT; qatlamlar jadvali bilan ---- */
+function Dxf(){this.l=[];this.layers={}}
+Dxf.prototype.line=function(ly,a,b,c,d){this.layers[ly]=1;this.l.push('0\nLINE\n8\n'+ly+'\n10\n'+a.toFixed(4)+'\n20\n'+b.toFixed(4)+'\n30\n0.0\n11\n'+c.toFixed(4)+'\n21\n'+d.toFixed(4)+'\n31\n0.0')};
+Dxf.prototype.text=function(ly,x,y,h,s){this.layers[ly]=1;this.l.push('0\nTEXT\n8\n'+ly+'\n10\n'+x.toFixed(4)+'\n20\n'+y.toFixed(4)+'\n30\n0.0\n40\n'+h+'\n1\n'+tr(s).replace(/[\r\n]/g,' '))};
+Dxf.prototype.out=function(){var c=0,L=Object.keys(this.layers).map(function(n){c++;return '0\nLAYER\n2\n'+n+'\n70\n0\n62\n7\n6\nCONTINUOUS'}).join('\n');
+  return '0\nSECTION\n2\nHEADER\n9\n$ACADVER\n1\nAC1009\n9\n$INSUNITS\n70\n4\n0\nENDSEC\n0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLTYPE\n70\n1\n0\nLTYPE\n2\nCONTINUOUS\n70\n0\n3\nSolid line\n72\n65\n73\n0\n40\n0.0\n0\nENDTAB\n0\nTABLE\n2\nLAYER\n70\n'+c+'\n'+L+'\n0\nENDTAB\n0\nENDSEC\n0\nSECTION\n2\nENTITIES\n'+this.l.join('\n')+'\n0\nENDSEC\n0\nEOF\n'};
+function drawSeg(d,ly,seg,ox,oy,rot,sx){seg.forEach(function(s){var a=s[0],b=s[1],c=s[2],e=s[3];
+  if(rot){var a2=b,b2=sx-a,c2=e,e2=sx-c;a=a2;b=b2;c=c2;e=e2}d.line(ly,ox+a,oy+b,ox+c,oy+e)})}
+function dxfParts(its){var d=new Dxf(),x=0,y=0,rowH=0,gap=60,maxW=6000;
+  its.forEach(function(it){if(x>0&&x+it.sx>maxW){x=0;y+=rowH+gap+40;rowH=0}
+    drawSeg(d,'DETAL',it.seg,x,y,false,it.sx);d.text('YOZUV',x+5,y+5,Math.max(8,Math.min(30,it.sy/10)),it.code+' '+it.name+' '+r1(it.sx)+'x'+r1(it.sy)+'x'+r1(it.thick));
+    x+=it.sx+gap;rowH=Math.max(rowH,it.sy)});return d.out()}
+function dxfNest(res){var d=new Dxf(),o=res.opt,oy=0;
+  sheetsOf(res).forEach(function(s){d.line('LIST',0,oy,o.W,oy);d.line('LIST',o.W,oy,o.W,oy+o.H);d.line('LIST',o.W,oy+o.H,0,oy+o.H);d.line('LIST',0,oy+o.H,0,oy);
+    d.text('YOZUV',10,oy+o.H+20,40,s.mat+' '+s.thick+'mm list '+s.idx+'/'+s.of);
+    s.pl.forEach(function(p){var it=p.it.ref;drawSeg(d,'DETAL',it.seg,o.trim+p.x,oy+o.trim+p.y,p.it.rot,it.sx);d.text('YOZUV',o.trim+p.x+4,oy+o.trim+p.y+4,Math.max(8,Math.min(24,p.h/6)),it.code)});
+    oy+=o.H+200});return d.out()}
+/* ---- XLSX (SheetJS global) ---- */
+function xlsxBook(X,its,res,ed,meta){var wb=X.utils.book_new(),add=function(n,a){X.utils.book_append_sheet(wb,X.utils.aoa_to_sheet(a),n)};
+  add('Detallar',[['Kod','Nomi','Soni','Uzunlik mm','Eni mm','Qalinlik mm','Material']].concat(partRows(its).map(function(g){var i=g.it;return[i.code,i.name,g.n,r1(i.sx),r1(i.sy),r1(i.thick),i.mat]})));
+  if(res)add('Material sarfi',[['Material','Qalinlik mm','Detal','List soni','Detallar m2','List m2','Chiqindi %']].concat(summary(res).map(function(s){return[s.mat,s.thick,s.count,s.sheets,+s.usedM2.toFixed(3),+s.sheetM2.toFixed(3),+s.wastePct.toFixed(1)]})));
+  if(res)add('Raskroy',[['Material','List','Kod','Nomi','X mm','Y mm','Eni mm','Bo\'yi mm','Aylangan']].concat([].concat.apply([],sheetsOf(res).map(function(s){return s.pl.map(function(p){return[s.mat,s.idx+'/'+s.of,p.it.code,p.it.name,r1(p.x+res.opt.trim),r1(p.y+res.opt.trim),r1(p.w),r1(p.h),p.it.rot?'ha':'yo\'q']})}))));
+  if(ed)add('Kromka',[['Kod','Nomi','Material','Kromka uzunligi mm']].concat(ed.rows.map(function(r){return[r.code,r.name,r.mat,r1(r.len)]})).concat([['','','Jami m',+(ed.totalMm/1000).toFixed(3)],['','','Zaxira bilan m',+ed.withReserveM.toFixed(3)]]));
+  return wb}
+/* ---- PDF (jsPDF; lotin harflarida) ---- */
+function pdfDoc(J,its,res,ed,meta){var doc=new J({orientation:'landscape',unit:'mm',format:'a4'}),W=297,H=210,y=14;
+  doc.setFontSize(14);doc.text(tr('UstaCAD · Texnik hujjat: '+(meta.name||'')),10,y);y+=6;doc.setFontSize(9);doc.text(tr('Manba: '+meta.file+' · Sana: '+meta.date+' · Detallar: '+its.length),10,y);y+=7;
+  doc.setFontSize(9);doc.text('Kod',10,y);doc.text('Nomi',32,y);doc.text('Soni',90,y);doc.text('Uzunlik x Eni x Qalinlik (mm)',105,y);doc.text('Material',165,y);y+=1.5;doc.line(10,y,287,y);y+=4;
+  partRows(its).forEach(function(g){if(y>H-12){doc.addPage();y=14}var i=g.it;doc.text(tr(i.code),10,y);doc.text(tr(i.name).slice(0,28),32,y);doc.text(String(g.n),90,y);doc.text(r1(i.sx)+' x '+r1(i.sy)+' x '+r1(i.thick),105,y);doc.text(tr(i.mat).slice(0,60),165,y);y+=5});
+  if(res){y+=4;if(y>H-30){doc.addPage();y=14}doc.setFontSize(11);doc.text('Material sarfi',10,y);y+=6;doc.setFontSize(9);
+    summary(res).forEach(function(s){doc.text(tr(s.mat).slice(0,50)+' '+s.thick+'mm: '+s.count+' detal, '+s.sheets+' list ('+res.opt.W+'x'+res.opt.H+'), foydalanish '+(100-s.wastePct).toFixed(1)+'%, chiqindi '+s.wastePct.toFixed(1)+'%',10,y);y+=5});
+    sheetsOf(res).forEach(function(s){doc.addPage();doc.setFontSize(11);doc.text(tr(s.mat)+' '+s.thick+'mm — list '+s.idx+'/'+s.of+' ('+res.opt.W+' x '+res.opt.H+' mm)',10,12);
+      var sc=Math.min((W-20)/res.opt.W,(H-30)/res.opt.H),ox=10,oy=18;doc.setDrawColor(0);doc.rect(ox,oy,res.opt.W*sc,res.opt.H*sc);doc.setFontSize(7);
+      s.pl.forEach(function(p){var x=ox+(res.opt.trim+p.x)*sc,yy=oy+(res.opt.trim+p.y)*sc;doc.rect(x,yy,p.w*sc,p.h*sc);if(p.w*sc>8&&p.h*sc>4)doc.text(tr(p.it.code)+(p.it.rot?' R':'')+'\n'+r1(p.w)+'x'+r1(p.h),x+1,yy+3)})})}
+  if(ed&&ed.rows.length){doc.addPage();doc.setFontSize(11);doc.text('Kromka (qirra lentasi) hisoboti',10,14);doc.setFontSize(9);var yy=22;
+    ed.rows.forEach(function(r){if(yy>H-14){doc.addPage();yy=14}doc.text(tr(r.code)+'  '+tr(r.name).slice(0,30)+'  '+tr(r.mat).slice(0,40)+'  '+r1(r.len)+' mm',10,yy);yy+=5});
+    doc.text('Jami: '+(ed.totalMm/1000).toFixed(2)+' m; zaxira bilan: '+ed.withReserveM.toFixed(2)+' m',10,yy+3)}
+  return doc}
+root.B3DProd={tr:tr,items:items,nest:nest,checkNest:checkNest,edges:edges,partRows:partRows,sheetsOf:sheetsOf,summary:summary,csv:csv,dxfParts:dxfParts,dxfNest:dxfNest,xlsxBook:xlsxBook,pdfDoc:pdfDoc};
+if(typeof module!=='undefined')module.exports=root.B3DProd;
+})(typeof window!=='undefined'?window:globalThis);
+
+</script>
 <script>/* B3D UI */
 /* UstaCAD · B3D import va 3D tahrirlash paneli (Bazis-Mebelshchik). Original fayl o'zgarmaydi. */
 (function(){
@@ -7038,7 +7148,7 @@ function show(r,fname){
     h+="<div style='font-size:12px;color:#c9c0b0;line-height:1.5'>Bazis "+r.magic+" · v"+esc(r.docVersion)+" · "+parts.length+" ta detal · hajm "+bb.map(fx).join(' × ')+" mm"+(undo.length?" · <b style='color:#9ad'>tahrirlangan ("+undo.length+")</b>":"")+"</div>";
     if(v.errors.length)h+="<div style='font-size:12px;color:#ff8a8a'>❌ "+v.errors.map(esc).join('<br>❌ ')+"</div>";
     var w=r.warnings.concat(v.warnings);if(w.length)h+="<div style='font-size:12px;color:#f0b060'>⚠ "+w.map(esc).join('<br>⚠ ')+"</div>";
-    h+="<div style='margin:6px 0'><button id='e_un' style='"+BS+"'>↶ Bekor qilish</button><button id='e_rs' style='"+BS+"'>Asl holat</button><button id='e_csv' style='"+BS+"'>CSV</button><button id='e_js' style='"+BS+"'>JSON</button></div>";
+    h+="<div style='margin:6px 0'><button id='e_un' style='"+BS+"'>↶ Bekor qilish</button><button id='e_rs' style='"+BS+"'>Asl holat</button><button id='e_pr' style='"+BS+";background:#2a5a9a;color:#fff'>⚙ Ishlab chiqarish</button><button id='e_csv' style='"+BS+"'>CSV</button><button id='e_js' style='"+BS+"'>JSON</button></div>";
     if(p){var c=E.center(p);
       h+="<div style='border:1px solid #38332b;border-radius:8px;padding:8px;margin-bottom:8px'><b>"+esc(p.name)+"</b> <span style='color:#9a9285'>"+esc(p.code)+"</span>"+
       "<div style='display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px'>"+
@@ -7050,24 +7160,27 @@ function show(r,fname){
       ['X','Y','Z'].map(function(a,i){return "<button class='mv' data-a='"+i+"' data-s='-1' style='"+BS+"'>−"+a+"</button><button class='mv' data-a='"+i+"' data-s='1' style='"+BS+"'>+"+a+"</button>"}).join('')+
       "<div style='margin-top:4px'>Aylantirish: "+['X','Y','Z'].map(function(a,i){return "<button class='rt' data-a='"+i+"' data-d='-90' style='"+BS+"'>"+a+" −90°</button><button class='rt' data-a='"+i+"' data-d='90' style='"+BS+"'>"+a+" +90°</button>"}).join('')+
       "<br>Burchak <input id='f_ag' type='number' value='15' style='width:70px'>° <select id='f_ax'><option value='0'>X</option><option value='1' selected>Y</option><option value='2'>Z</option></select> <button id='f_rg' style='"+BS+"'>Aylantir</button></div>"+
+      "<div style='margin-top:6px;font-size:12px'>Kromka (lokal qirra): "+[['b','Past'],['t','Yuqori'],['l','Chap'],['r','O\'ng']].map(function(e){return "<label style='margin-right:8px'><input class='ed_k' type='checkbox' data-e='"+e[0]+"' "+((p.edge&&p.edge[e[0]])?'checked':'')+" style='width:auto'> "+e[1]+"</label>"}).join('')+"</div>"+
       "<div style='margin-top:4px'><button id='e_cp' style='"+BS+"'>⧉ Nusxalash</button><button id='e_dl' style='"+BS+";color:#ff8a8a'>🗑 O'chirish</button><button id='e_cl' style='"+BS+"'>Rangni asliga</button></div>"+
       "<div style='font-size:12px;color:#9a9285;margin-top:6px'>Markaz: "+c.map(fx).join(', ')+" · aylanish (kvaternion): "+p.quat.map(function(x){return (Math.round(x*1000)/1000)}).join(', ')+"<br>Teshik/prisadka: "+(p.hasParams?"detalda qo'shimcha parametrlar bor, lekin ular hali dekodlanmagan":"bu detalda teshik ma'lumoti yo'q")+(r.unknownOps?" (faylda umumiy 'Opers' bloklari bor, o'qilmagan)":"")+"</div></div>"}
     else h+="<div style='font-size:12px;color:#9a9285;margin:4px 0'>Detalni 3D da yoki ro'yxatda bosib tanlang.</div>";
     h+="<table style='width:100%;border-collapse:collapse;font-size:12px'><tr style='color:#9a9285;text-align:left'><th>Kod</th><th>Nomi</th><th>L×E×Q</th><th>Material</th></tr>"+
       parts.map(function(q){return "<tr data-u='"+q.uid+"' style='border-top:1px solid #38332b;cursor:pointer;"+(q.uid===sel?"background:#243a55":"")+"'><td>"+esc(q.code)+"</td><td>"+esc(q.name)+"</td><td>"+fx(q.L||0)+'×'+fx(q.Wd||0)+'×'+fx(q.thick)+"</td><td>"+esc(q.mat)+"</td></tr>"}).join('')+"</table>"+
-      "<p style='font-size:11px;color:#9a9285;margin:8px 0 0'>Eksport .b3d hali yo'q (format yozilishi tasdiqlanmagan). Tahrirlar shu panelda; UstaCAD asosiy modeliga hali uzatilmagan.</p>";
+      "<p style='font-size:11px;color:#9a9285;margin:8px 0 0'>Eksport .b3d yo'q (format yozilishi tasdiqlanmagan). DXF/XLSX/PDF/raskroy: «Ishlab chiqarish» tugmasi. Tahrirlar shu panelda; UstaCAD asosiy modeliga hali uzatilmagan.</p>";
     var st=pn.scrollTop;pn.innerHTML=h;pn.scrollTop=st;wire()}
   function wire(){
     var $q=function(s){return pn.querySelector(s)};
     pn.querySelectorAll('tr[data-u]').forEach(function(t){t.onclick=function(){pick(+t.getAttribute('data-u'))}});
     $q('#e_un').onclick=function(){if(!undo.length)return toast('Bekor qiladigan amal yo\'q');var s=undo.pop();parts=JSON.parse(s);if(byId(sel)==null)sel=null;buildAll();render()};
     $q('#e_rs').onclick=function(){if(!undo.length&&JSON.stringify(parts)===orig)return;snap();parts=JSON.parse(orig);sel=null;buildAll();render()};
+    $q('#e_pr').onclick=function(){if(!window.B3DProdUI)return toast('Ishlab chiqarish moduli yuklanmagan');window.B3DProdUI.open(parts,fname,r)};
     $q('#e_csv').onclick=function(){save(fname.replace(/\.b3d$/i,'')+'-detallar.csv',csv(parts),'text/csv')};
-    $q('#e_js').onclick=function(){save(fname.replace(/\.b3d$/i,'')+'-tahrirlangan.json',JSON.stringify({manba:fname,format:r.magic,versiya:r.docVersion,gabarit:r.frame,detallar:parts.map(function(p){return{kod:p.code,nomi:p.name,uzunlik:p.L,eni:p.Wd,qalinlik:p.thick,material:p.mat,rang:p.colorOverride!=null?hex(p.colorOverride):null,joy:p.pos,kvaternion:p.quat,kontur:p.contour.ok?p.contour.seg:null}})},null,1),'application/json')};
+    $q('#e_js').onclick=function(){save(fname.replace(/\.b3d$/i,'')+'-tahrirlangan.json',JSON.stringify({manba:fname,format:r.magic,versiya:r.docVersion,gabarit:r.frame,detallar:parts.map(function(p){return{kod:p.code,nomi:p.name,uzunlik:p.L,eni:p.Wd,qalinlik:p.thick,material:p.mat,rang:p.colorOverride!=null?hex(p.colorOverride):null,joy:p.pos,kvaternion:p.quat,kromka:p.edge||null,kontur:p.contour.ok?p.contour.seg:null}})},null,1),'application/json')};
     if(!byId(sel))return;
     $q('#f_nm').onchange=function(){var v=this.value;act(function(p){p.name=v})};
     $q('#f_mt').onchange=function(){var v=this.value;act(function(p){p.mat=v})};
     $q('#f_cl').onchange=function(){var v=parseInt(this.value.slice(1),16);act(function(p){p.colorOverride=v})};
+    pn.querySelectorAll('.ed_k').forEach(function(cb){cb.onchange=function(){var k=cb.getAttribute('data-e'),v=cb.checked;act(function(p){p.edge=Object.assign({},p.edge||{});p.edge[k]=v})}});
     $q('#e_cl').onclick=function(){act(function(p){p.colorOverride=null})};
     $q('#f_th').onchange=function(){var v=num(this);act(function(p){E.setThick(p,v)})};
     $q('#f_sx').onchange=function(){var v=num(this);act(function(p){E.resize(p,v,p.sy)})};
@@ -7092,6 +7205,58 @@ function init(){
 var uid=0;
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 setTimeout(init,1500);
+})();
+
+</script>
+<script>/* B3D prod UI */
+/* UstaCAD · B3D ishlab chiqarish paneli */
+(function(){
+var P=window.B3DProd,E=window.B3DEdit;if(!P||!E)return;
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function r1(n){return Math.round(n*10)/10}
+function save(name,data,mime){var b=new Blob([data],{type:mime}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},500)}
+var COL=['#d9c7a1','#c9d9a1','#a1c9d9','#d9a1c9','#d9b18a','#b0a1d9'];
+function svg(res,s,ci){var o=res.opt,k=Math.max(1,Math.round(o.W/60));
+  var h="<svg viewBox='-"+k+" -"+k+" "+(o.W+2*k)+" "+(o.H+2*k)+"' style='width:100%;height:auto;background:#14110d;border:1px solid #38332b;border-radius:6px'><rect x='0' y='0' width='"+o.W+"' height='"+o.H+"' fill='none' stroke='#8a8070' stroke-width='"+k/3+"'/>";
+  s.pl.forEach(function(p){var x=o.trim+p.x,y=o.trim+p.y,fs=Math.max(24,Math.min(70,Math.min(p.w,p.h)/4));
+    h+="<rect x='"+x+"' y='"+y+"' width='"+p.w+"' height='"+p.h+"' fill='"+COL[ci%COL.length]+"' fill-opacity='.85' stroke='#3a3228' stroke-width='"+k/4+"'/>";
+    if(p.w>fs*3&&p.h>fs*2)h+="<text x='"+(x+p.w/2)+"' y='"+(y+p.h/2)+"' font-size='"+fs+"' text-anchor='middle' fill='#201d18'>"+esc(p.it.code)+(p.it.rot?' ⟳':'')+"</text><text x='"+(x+p.w/2)+"' y='"+(y+p.h/2+fs*1.1)+"' font-size='"+fs*.8+"' text-anchor='middle' fill='#201d18'>"+r1(p.w)+'×'+r1(p.h)+"</text>"});
+  return h+"</svg>"}
+function open(parts,fname,r){
+  var base=fname.replace(/\.b3d$/i,''),ov=document.createElement('div');ov.id='b3d_prod';
+  ov.style.cssText='position:fixed;left:0;top:0;right:0;bottom:0;height:100dvh;z-index:99995;background:#14110d;color:#efe9df;display:flex;flex-direction:column;font:14px system-ui,-apple-system,sans-serif';
+  var IN="style='width:100%'",pre=P.items(parts),st={res:null,ed:null};
+  ov.innerHTML="<div style='display:flex;gap:8px;align-items:center;padding:calc(env(safe-area-inset-top,0px) + 8px) 10px 8px;background:#201d18;border-bottom:1px solid #38332b'><button id='pr_x' style='padding:8px 12px'>✕</button><b style='flex:1;font-size:15px'>Ishlab chiqarish · "+esc(fname)+"</b></div>"+
+  "<div style='flex:1;overflow:auto;padding:10px 10px calc(env(safe-area-inset-bottom,0px) + 14px)'>"+
+  "<div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px'><label>List eni mm<input id='pr_w' type='number' value='2800' "+IN+"></label><label>List bo'yi mm<input id='pr_h' type='number' value='2070' "+IN+"></label><label>Kesim kengligi (kerf) mm<input id='pr_k' type='number' step='any' value='4' "+IN+"></label><label>Chekka (obrezka) mm<input id='pr_t' type='number' step='any' value='10' "+IN+"></label><label>Kromka zaxirasi %<input id='pr_rs' type='number' value='5' "+IN+"></label></div>"+
+  "<label style='display:block;margin:6px 0'><input id='pr_rt' type='checkbox' style='width:auto'> Detallarni 90° aylantirishga ruxsat (tekstura yo'nalishi buzilishi mumkin)</label>"+
+  "<button id='pr_go' class='pr' style='padding:9px 14px'>▶ Kesish sxemasini hisoblash</button>"+
+  "<div id='pr_out' style='margin-top:10px'></div>"+
+  "<div style='margin-top:12px;padding:8px;border:1px dashed #38332b;border-radius:8px;font-size:12px;color:#c9c0b0;line-height:1.5'><b>CNC, prisadka, G-code va .b3d eksport — hozircha o'chirilgan.</b><br>Sabab: namunadagi faylda teshik va frezalash ma'lumoti (Opers) yo'q, shuning uchun uning tuzilmasi dekodlanmagan; stanok formatlari ham tasdiqlanmagan. Taxmin bilan fayl yaratilmaydi. .b3d yozish formati ham Bazis'da ochib tekshirilmagan.</div></div>";
+  document.body.appendChild(ov);
+  var $q=function(s){return ov.querySelector(s)},out=$q('#pr_out');
+  function opts(){return{W:+$q('#pr_w').value,H:+$q('#pr_h').value,kerf:+$q('#pr_k').value,trim:+$q('#pr_t').value,rotate:$q('#pr_rt').checked}}
+  function calc(){
+    var it=P.items(parts),o=opts(),res=P.nest(it.items,o),ed=P.edges(it.items,+$q('#pr_rs').value||0),chk=res.errors.length&&!res.groups.length?[]:P.checkNest(res,it.items.length),g=E.validate(parts,null);
+    st.res=res;st.ed=ed;st.it=it;var h='';
+    if(it.warnings.length)h+="<div style='font-size:12px;color:#f0b060'>⚠ "+it.warnings.map(esc).join('<br>⚠ ')+"</div>";
+    res.warnings.forEach(function(w){h+="<div style='font-size:12px;color:#f0b060'>⚠ "+esc(w)+"</div>"});
+    res.errors.concat(chk,g.errors).forEach(function(w){h+="<div style='font-size:12px;color:#ff8a8a'>❌ "+esc(w)+"</div>"});
+    if(!res.groups.length){out.innerHTML=h||'Detal yo\'q';return}
+    h+="<div style='margin:8px 0'>"+P.summary(res).map(function(s){return "<div><b>"+esc(s.mat.split('\r')[0])+"</b> "+s.thick+" mm: "+s.count+" detal → <b>"+s.sheets+" list</b> · detallar "+s.usedM2.toFixed(2)+" m² / list "+s.sheetM2.toFixed(2)+" m² · chiqindi <b>"+s.wastePct.toFixed(1)+"%</b></div>"}).join('')+"</div>";
+    h+="<div style='font-size:12px;color:#c9c0b0;margin-bottom:6px'>Kromka: "+(ed.rows.length?ed.rows.length+" ta detalda, jami "+(ed.totalMm/1000).toFixed(2)+" m (zaxira bilan "+ed.withReserveM.toFixed(2)+" m)":"hech bir detalga belgilanmagan (tahrir panelida «Kromka» katakchalari)")+"</div>";
+    h+="<div style='display:flex;gap:6px;flex-wrap:wrap;margin:6px 0'><button id='x_dp'>DXF detallar</button><button id='x_dn'>DXF raskroy</button><button id='x_xl'>XLSX</button><button id='x_cv'>CSV</button><button id='x_pf'>PDF hujjat</button></div>";
+    var gi=0;P.sheetsOf(res).forEach(function(s,i){h+="<div style='margin:10px 0 2px;font-size:13px'><b>"+esc(s.mat.split('\r')[0])+" "+s.thick+"mm — list "+s.idx+"/"+s.of+"</b> · "+s.pl.length+" detal</div>"+svg(res,s,i)});
+    out.innerHTML=h;
+    $q('#x_dp').onclick=function(){save(base+'-detallar.dxf',P.dxfParts(st.it.items),'application/dxf')};
+    $q('#x_dn').onclick=function(){save(base+'-raskroy.dxf',P.dxfNest(st.res),'application/dxf')};
+    $q('#x_cv').onclick=function(){save(base+'-detallar.csv',P.csv(st.it.items),'text/csv')};
+    $q('#x_xl').onclick=function(){if(!window.XLSX)return toast('XLSX kutubxonasi yuklanmagan (internet kerak). CSV dan foydalaning.');try{var wb=P.xlsxBook(window.XLSX,st.it.items,st.res,st.ed,{});var a=window.XLSX.write(wb,{type:'array',bookType:'xlsx'});save(base+'-ishlab-chiqarish.xlsx',a,'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')}catch(e){toast('XLSX xatosi: '+e.message)}};
+    $q('#x_pf').onclick=function(){var J=window.jspdf&&window.jspdf.jsPDF;if(!J)return toast('PDF kutubxonasi yuklanmagan (internet kerak). XLSX/CSV dan foydalaning.');try{var d=P.pdfDoc(J,st.it.items,st.res,st.ed,{name:base,file:fname,date:new Date().toISOString().slice(0,10)});save(base+'-texnik-hujjat.pdf',d.output('arraybuffer'),'application/pdf')}catch(e){toast('PDF xatosi: '+e.message)}}}
+  $q('#pr_go').onclick=function(){try{calc()}catch(e){out.innerHTML="<div style='color:#ff8a8a'>❌ "+esc(e.message)+"</div>"}};
+  $q('#pr_x').onclick=function(){ov.remove()};
+  calc()}
+window.B3DProdUI={open:open};
 })();
 
 </script>
